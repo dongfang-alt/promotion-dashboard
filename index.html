@@ -1,0 +1,1900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>推广中台 - 绿巨能</title>
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<!-- SheetJS for Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- Day.js for date handling -->
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+<style>
+/* ========== Reset & Base ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue: #1565C0;
+  --blue-light: #1E88E5;
+  --blue-dark: #0D47A1;
+  --blue-bg: #E3F2FD;
+  --orange: #FF6D00;
+  --orange-light: #FF9100;
+  --orange-bg: #FFF3E0;
+  --gray-50: #FAFAFA;
+  --gray-100: #F5F5F5;
+  --gray-200: #EEEEEE;
+  --gray-300: #E0E0E0;
+  --gray-400: #BDBDBD;
+  --gray-600: #757575;
+  --gray-800: #424242;
+  --gray-900: #212121;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --transition: .2s ease;
+}
+html { font-size: 14px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-900);
+  min-height: 100vh;
+  background-image:
+    linear-gradient(45deg, rgba(21,101,192,.03) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(21,101,192,.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(21,101,192,.03) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(21,101,192,.03) 75%);
+  background-size: 40px 40px;
+  background-position: 0 0, 0 20px, 20px -20px, -20px 0;
+}
+
+/* ========== Layout ========== */
+.app { display: flex; min-height: 100vh; }
+/* Sidebar */
+.sidebar {
+  width: 220px; min-width: 220px;
+  background: #fff;
+  border-right: 1px solid var(--gray-200);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; z-index: 100;
+  box-shadow: 2px 0 8px rgba(0,0,0,.04);
+}
+.sidebar-logo {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-logo .icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--blue), var(--orange));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 18px; font-weight: 700;
+}
+.sidebar-logo .title {
+  font-size: 16px; font-weight: 700;
+  background: linear-gradient(135deg, var(--blue), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.sidebar-logo .subtitle { font-size: 11px; color: var(--gray-400); margin-top: -2px; }
+.sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  cursor: pointer; transition: var(--transition);
+  color: var(--gray-600); font-size: 13px; font-weight: 500;
+  margin-bottom: 4px;
+}
+.nav-item:hover { background: var(--blue-bg); color: var(--blue); }
+.nav-item.active { background: var(--blue); color: #fff; box-shadow: 0 2px 8px rgba(21,101,192,.3); }
+.nav-item .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+.nav-item .nav-badge {
+  margin-left: auto; background: var(--orange); color: #fff;
+  font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600;
+}
+
+/* Main */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* ========== Header ========== */
+.header {
+  background: #fff; border-bottom: 1px solid var(--gray-200);
+  padding: 14px 24px; display: flex; align-items: center; gap: 16px;
+  flex-wrap: wrap; position: sticky; top: 0; z-index: 50;
+  box-shadow: var(--shadow-sm);
+}
+.header-title { font-size: 18px; font-weight: 700; color: var(--gray-900); }
+.header-title small { font-size: 12px; font-weight: 400; color: var(--gray-400); margin-left: 8px; }
+.header-controls { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
+.header-date { display: flex; align-items: center; gap: 6px; }
+.header-date input[type="date"] {
+  border: 1px solid var(--gray-300); border-radius: 6px;
+  padding: 6px 10px; font-size: 13px; color: var(--gray-800); background: #fff;
+  outline: none; transition: var(--transition);
+}
+.header-date input[type="date"]:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(21,101,192,.1); }
+.header-date .sep { color: var(--gray-400); }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 6px; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: var(--transition); text-decoration: none;
+}
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: var(--blue-dark); box-shadow: 0 2px 8px rgba(21,101,192,.3); }
+.btn-orange { background: var(--orange); color: #fff; }
+.btn-orange:hover { background: #E65100; box-shadow: 0 2px 8px rgba(255,109,0,.3); }
+.btn-outline { background: #fff; color: var(--gray-600); border: 1px solid var(--gray-300); }
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-icon { width: 34px; height: 34px; padding: 0; justify-content: center; }
+
+/* ========== Content Area ========== */
+.content { padding: 20px 24px; flex: 1; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ========== Stats Summary Row ========== */
+.stats-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.stat-card {
+  background: #fff; border-radius: var(--radius); padding: 14px 16px;
+  box-shadow: var(--shadow-sm); border-left: 3px solid var(--blue);
+  position: relative; overflow: hidden;
+}
+.stat-card::after {
+  content: ''; position: absolute; right: -10px; top: -10px;
+  width: 60px; height: 60px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(21,101,192,.05), rgba(255,109,0,.05));
+}
+.stat-card.orange { border-left-color: var(--orange); }
+.stat-card.orange::after { background: linear-gradient(135deg, rgba(255,109,0,.05), rgba(21,101,192,.05)); }
+.stat-card.green { border-left-color: #2E7D32; }
+.stat-card.green::after { background: linear-gradient(135deg, rgba(46,125,50,.05), rgba(21,101,192,.05)); }
+.stat-card .label { font-size: 12px; color: var(--gray-400); margin-bottom: 4px; }
+.stat-card .value { font-size: 22px; font-weight: 700; color: var(--gray-900); }
+.stat-card .value .unit { font-size: 13px; font-weight: 400; color: var(--gray-600); }
+.stat-card .change {
+  font-size: 12px; margin-top: 4px;
+}
+.stat-card .change.up { color: #D32F2F; }
+.stat-card .change.down { color: #2E7D32; }
+
+/* ========== Filter Chips ========== */
+.filter-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: #fff; border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm); margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.filter-bar .filter-label { font-size: 12px; color: var(--gray-400); font-weight: 500; }
+.filter-chip {
+  padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 500;
+  border: 1px solid var(--gray-300); background: #fff; color: var(--gray-600);
+  cursor: pointer; transition: var(--transition);
+}
+.filter-chip:hover { border-color: var(--blue); color: var(--blue); }
+.filter-chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.filter-chip.orange.active { background: var(--orange); border-color: var(--orange); }
+
+/* ========== Card Grid ========== */
+.card-grid {
+  display: grid; gap: 16px;
+}
+.card-grid-2 { grid-template-columns: 1fr 1fr; }
+.card-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.card-grid-4 { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+
+.card {
+  background: #fff; border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  overflow: hidden; transition: var(--transition);
+  border: 1px solid var(--gray-100);
+}
+.card:hover { box-shadow: var(--shadow-md); }
+.card-header {
+  padding: 12px 16px; border-bottom: 1px solid var(--gray-100);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-header .card-title {
+  font-size: 14px; font-weight: 600; color: var(--gray-800);
+  display: flex; align-items: center; gap: 6px;
+}
+.card-header .card-badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px;
+  font-weight: 600;
+}
+.card-header .card-badge.tmall { background: var(--orange-bg); color: var(--orange); }
+.card-header .card-badge.jd { background: var(--blue-bg); color: var(--blue); }
+.card-body { padding: 14px 16px; }
+.chart-container { width: 100%; height: 260px; }
+
+/* ========== Store Card ========== */
+.store-card {
+  background: #fff; border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100); overflow: hidden;
+  transition: var(--transition); cursor: pointer;
+}
+.store-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.store-card .store-top {
+  padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.store-card .store-avatar {
+  width: 40px; height: 40px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.store-card .store-avatar.tmall { background: linear-gradient(135deg, var(--orange), #FFB300); }
+.store-card .store-avatar.jd { background: linear-gradient(135deg, var(--blue), #42A5F5); }
+.store-card .store-avatar.mrgreen { background: linear-gradient(135deg, #2E7D32, #66BB6A); }
+.store-card .store-name { font-size: 14px; font-weight: 600; color: var(--gray-900); }
+.store-card .store-platform { font-size: 11px; color: var(--gray-400); }
+.store-card .store-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  padding: 12px 16px;
+}
+.store-card .store-stat { text-align: center; }
+.store-card .store-stat .val { font-size: 18px; font-weight: 700; color: var(--gray-900); }
+.store-card .store-stat .lbl { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+/* ========== Channel Group (渠道分组) ========== */
+.channel-group {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100);
+  overflow: hidden;
+}
+.channel-group .group-header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--gray-100);
+  background: var(--gray-50);
+}
+.channel-group .group-icon { font-size: 18px; }
+.channel-group .group-name { font-size: 14px; font-weight: 600; color: var(--gray-900); }
+.channel-group .group-sub { font-size: 11px; color: var(--gray-400); margin-left: auto; }
+.channel-group .group-stores {
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+/* ========== Person Card ========== */
+.person-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-100);
+  transition: var(--transition);
+}
+.person-card:hover { border-color: var(--blue); box-shadow: var(--shadow-sm); }
+.person-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 16px; font-weight: 700; flex-shrink: 0;
+}
+.person-info { flex: 1; min-width: 0; }
+.person-info .name { font-size: 13px; font-weight: 600; }
+.person-info .meta { font-size: 11px; color: var(--gray-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person-stats { display: flex; gap: 12px; }
+.person-stats .ps { text-align: center; min-width: 50px; }
+.person-stats .pv { font-size: 14px; font-weight: 700; color: var(--gray-900); }
+.person-stats .pl { font-size: 10px; color: var(--gray-400); }
+
+/* ========== Person Org (思维导图人员架构) ========== */
+.person-org {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 0;
+}
+.org-card {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100);
+  overflow: hidden;
+}
+.org-card.tmall { border-top: 3px solid var(--orange); }
+.org-card.jd { border-top: 3px solid var(--blue); }
+.org-card .org-header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.org-card .org-icon { font-size: 18px; }
+.org-card .org-name { font-size: 14px; font-weight: 600; color: var(--gray-900); }
+.org-card .org-count {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.org-card.tmall .org-count { background: var(--orange-bg); color: var(--orange); }
+.org-card.jd .org-count { background: var(--blue-bg); color: var(--blue); }
+.org-card .org-members {
+  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.member-chip {
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--gray-200);
+  background: #fff;
+  color: var(--gray-600);
+  transition: var(--transition);
+  cursor: default;
+}
+.member-chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+.org-card .org-data {
+  padding: 0 12px 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.org-data-item {
+  flex: 1;
+  min-width: 70px;
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--gray-50);
+}
+.org-data-item .od-val { font-size: 14px; font-weight: 700; color: var(--gray-900); }
+.org-data-item .od-lbl { font-size: 10px; color: var(--gray-400); }
+
+/* ========== Category Tree ========== */
+.cat-tree { display: flex; flex-direction: column; gap: 8px; }
+.cat-node {
+  background: #fff; border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  cursor: pointer; transition: var(--transition);
+}
+.cat-node:hover { border-color: var(--blue); }
+.cat-node .cat-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cat-node .cat-name { font-size: 13px; font-weight: 600; color: var(--gray-800); }
+.cat-node .cat-arrow { color: var(--gray-400); transition: var(--transition); }
+.cat-node.expanded .cat-arrow { transform: rotate(90deg); }
+.cat-node .cat-children {
+  display: none; margin-top: 8px; padding-left: 20px;
+  border-left: 2px solid var(--gray-200);
+}
+.cat-node.expanded .cat-children { display: block; }
+
+/* ========== Abnormal Table ========== */
+.abnormal-table {
+  width: 100%; border-collapse: collapse;
+  background: #fff; border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.abnormal-table th {
+  background: var(--gray-100); padding: 10px 14px;
+  font-size: 12px; font-weight: 600; color: var(--gray-600);
+  text-align: left; border-bottom: 1px solid var(--gray-300);
+}
+.abnormal-table td {
+  padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--gray-100);
+}
+.abnormal-table tr:hover td { background: var(--blue-bg); }
+.abnormal-table .status-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 600;
+}
+.abnormal-table .status-badge.danger { background: #FFEBEE; color: #D32F2F; }
+.abnormal-table .status-badge.warning { background: #FFF3E0; color: #E65100; }
+.abnormal-table .status-badge.normal { background: #E8F5E9; color: #2E7D32; }
+
+/* ========== Upload Modal ========== */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.4); backdrop-filter: blur(4px);
+  z-index: 1000; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff; border-radius: var(--radius);
+  width: 520px; max-width: 90vw; max-height: 80vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+.modal-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--gray-200);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.modal-close {
+  background: none; border: none; font-size: 20px; cursor: pointer;
+  color: var(--gray-400); padding: 4px;
+}
+.modal-close:hover { color: var(--gray-800); }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 12px 20px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 8px; }
+
+.upload-zone {
+  border: 2px dashed var(--gray-300); border-radius: var(--radius-sm);
+  padding: 30px; text-align: center; transition: var(--transition);
+  cursor: pointer;
+}
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--blue); background: var(--blue-bg); }
+.upload-zone .icon { font-size: 36px; color: var(--gray-400); margin-bottom: 8px; }
+.upload-zone .text { font-size: 14px; color: var(--gray-600); }
+.upload-zone .text strong { color: var(--blue); }
+.upload-zone .hint { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+.upload-zone input[type="file"] { display: none; }
+
+.data-preview {
+  margin-top: 16px; max-height: 200px; overflow: auto;
+  border: 1px solid var(--gray-200); border-radius: var(--radius-sm);
+}
+.data-preview table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-preview th { background: var(--gray-100); padding: 6px 8px; position: sticky; top: 0; }
+.data-preview td { padding: 4px 8px; border-bottom: 1px solid var(--gray-100); }
+
+/* ========== No data ========== */
+.no-data {
+  text-align: center; padding: 40px 20px; color: var(--gray-400);
+}
+.no-data .icon { font-size: 48px; margin-bottom: 12px; }
+.no-data .text { font-size: 14px; }
+
+/* ========== Responsive ========== */
+@media (max-width: 900px) {
+  .sidebar { width: 60px; min-width: 60px; }
+  .sidebar-logo .title, .sidebar-logo .subtitle, .nav-item .nav-text, .nav-item .nav-badge { display: none; }
+  .nav-item { justify-content: center; padding: 10px; }
+  .card-grid-2, .card-grid-3 { grid-template-columns: 1fr; }
+  .header { padding: 10px 14px; }
+  .content { padding: 14px; }
+  .store-card .store-stats { grid-template-columns: 1fr 1fr; }
+  .person-org { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .header-controls { width: 100%; }
+}
+
+/* ========== Animations ========== */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn .3s ease; }
+
+/* ========== Scrollbar ========== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="icon">推</div>
+      <div>
+        <div class="title">推广中台</div>
+        <div class="subtitle">绿巨能 · 数据驾驶舱</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-page="channel" onclick="switchPage('channel')">
+        <span class="nav-icon">📊</span>
+        <span class="nav-text">渠道汇总</span>
+      </div>
+      <div class="nav-item" data-page="person" onclick="switchPage('person')">
+        <span class="nav-icon">👥</span>
+        <span class="nav-text">个人汇总</span>
+      </div>
+      <div class="nav-item" data-page="category" onclick="switchPage('category')">
+        <span class="nav-icon">📦</span>
+        <span class="nav-text">品类板块</span>
+      </div>
+      <div class="nav-item" data-page="abnormal" onclick="switchPage('abnormal')">
+        <span class="nav-icon">⚠️</span>
+        <span class="nav-text">异常单品</span>
+        <span class="nav-badge" id="abnormalBadge">0</span>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-title" id="pageTitle">渠道汇总 <small>Channel Summary</small></div>
+      <div class="header-controls">
+        <div class="header-date">
+          <input type="date" id="dateStart" onchange="applyFilters()">
+          <span class="sep">—</span>
+          <input type="date" id="dateEnd" onchange="applyFilters()">
+        </div>
+        <button class="btn btn-primary" onclick="openUploadModal()">📤 导入数据</button>
+        
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- ===== PAGE: 渠道汇总 ===== -->
+      <div class="page active" id="page-channel">
+        <div class="stats-row" id="channelStats"></div>
+
+        <!-- 渠道筛选 -->
+        <div class="filter-bar">
+          <span class="filter-label">渠道：</span>
+          <span class="filter-chip active" data-channel="all" onclick="filterChannel(this, 'channel')">全部</span>
+          <span class="filter-chip orange" data-channel="天猫" onclick="filterChannel(this, 'channel')">天猫</span>
+          <span class="filter-chip" data-channel="京东" onclick="filterChannel(this, 'channel')">京东</span>
+        </div>
+
+        <!-- 占比图 + 店铺卡片 两列布局 -->
+        <div class="card-grid card-grid-2" style="margin-bottom:16px;">
+          <!-- 占比图（百分比图） -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🧩 渠道消耗占比</span>
+              <span class="card-badge tmall">百分比</span>
+            </div>
+            <div class="card-body">
+              <div class="chart-container" id="channelPieChart" style="height:320px;"></div>
+            </div>
+          </div>
+          <!-- 渠道店铺分组 -->
+          <div id="channelGroupCards">
+            <div id="tmallGroup" class="channel-group">
+              <div class="group-header">
+                <span class="group-icon">🏪</span>
+                <span class="group-name">天猫</span>
+                <span class="group-sub">绿巨能旗舰店 · 绿巨能数码旗舰店</span>
+              </div>
+              <div class="group-stores" id="tmallStores"></div>
+            </div>
+            <div id="jdGroup" class="channel-group" style="margin-top:12px;">
+              <div class="group-header">
+                <span class="group-icon">🛒</span>
+                <span class="group-name">京东</span>
+                <span class="group-sub">京东自营 · 京东POP · MR.GREEN</span>
+              </div>
+              <div class="group-stores" id="jdStores"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 趋势图 -->
+        <div class="card" style="margin-top:0;">
+          <div class="card-header">
+            <span class="card-title">📈 渠道趋势对比</span>
+            <span class="card-badge tmall" id="channelTrendLabel">全部渠道</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container" id="channelTrendChart"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: 个人汇总 ===== -->
+      <div class="page" id="page-person">
+        <div class="stats-row" id="personStats"></div>
+
+        <!-- 渠道联动筛选 -->
+        <div class="filter-bar">
+          <span class="filter-label">渠道筛选：</span>
+          <span class="filter-chip active" data-channel="all" onclick="filterChannel(this, 'person')">全部</span>
+          <span class="filter-chip orange" data-channel="天猫" onclick="filterChannel(this, 'person')">天猫</span>
+          <span class="filter-chip" data-channel="京东" onclick="filterChannel(this, 'person')">京东</span>
+        </div>
+
+        <!-- 人员架构总览（思维导图预定义） -->
+        <div class="person-org">
+          <div class="org-card tmall">
+            <div class="org-header">
+              <span class="org-icon">🏪</span>
+              <span class="org-name">天猫 · 运营团队</span>
+              <span class="org-count" id="tmallPersonCount">10人</span>
+            </div>
+            <div class="org-members" id="tmallOrgMembers">
+              <span class="member-chip" data-name="梧桐">梧桐</span>
+              <span class="member-chip" data-name="小鱼">小鱼</span>
+              <span class="member-chip" data-name="超超">超超</span>
+              <span class="member-chip" data-name="七七">七七</span>
+              <span class="member-chip" data-name="洁凤">洁凤</span>
+              <span class="member-chip" data-name="清晨">清晨</span>
+              <span class="member-chip" data-name="予安">予安</span>
+              <span class="member-chip" data-name="行秋">行秋</span>
+              <span class="member-chip" data-name="武松">武松</span>
+              <span class="member-chip" data-name="铁蛋">铁蛋</span>
+            </div>
+            <div class="org-data" id="tmallOrgData"></div>
+          </div>
+          <div class="org-card jd">
+            <div class="org-header">
+              <span class="org-icon">🛒</span>
+              <span class="org-name">京东 · 运营团队</span>
+              <span class="org-count" id="jdPersonCount">8人</span>
+            </div>
+            <div class="org-members" id="jdOrgMembers">
+              <span class="member-chip" data-name="小赞">小赞</span>
+              <span class="member-chip" data-name="木子">木子</span>
+              <span class="member-chip" data-name="可可">可可</span>
+              <span class="member-chip" data-name="附子">附子</span>
+              <span class="member-chip" data-name="胖咯">胖咯</span>
+              <span class="member-chip" data-name="云海">云海</span>
+              <span class="member-chip" data-name="嘉嘉">嘉嘉</span>
+              <span class="member-chip" data-name="雪莲">雪莲</span>
+            </div>
+            <div class="org-data" id="jdOrgData"></div>
+          </div>
+        </div>
+
+        <!-- 详细个人卡片 -->
+        <div class="card-grid card-grid-2" id="personGroupGrid" style="margin-top:16px;"></div>
+      </div>
+
+      <!-- ===== PAGE: 品类板块 ===== -->
+      <div class="page" id="page-category">
+        <div class="stats-row" id="categoryStats"></div>
+
+        <!-- 联动筛选 -->
+        <div class="filter-bar">
+          <span class="filter-label">渠道：</span>
+          <span class="filter-chip active" data-channel="all" onclick="filterChannel(this, 'category')">全部</span>
+          <span class="filter-chip orange" data-channel="天猫" onclick="filterChannel(this, 'category')">天猫</span>
+          <span class="filter-chip" data-channel="京东" onclick="filterChannel(this, 'category')">京东</span>
+          <span style="margin-left:16px;" class="filter-label">品类：</span>
+          <select id="categorySelect" onchange="renderCategoryPage()" style="padding:4px 8px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;">
+            <option value="all">全部品类</option>
+          </select>
+        </div>
+
+        <div class="card-grid card-grid-2" id="categoryGrid"></div>
+      </div>
+
+      <!-- ===== PAGE: 异常单品 ===== -->
+      <div class="page" id="page-abnormal">
+        <div class="stats-row" id="abnormalStats"></div>
+
+        <div class="filter-bar">
+          <span class="filter-label">渠道：</span>
+          <span class="filter-chip active" data-channel="all" onclick="filterChannel(this, 'abnormal')">全部</span>
+          <span class="filter-chip orange" data-channel="天猫" onclick="filterChannel(this, 'abnormal')">天猫</span>
+          <span class="filter-chip" data-channel="京东" onclick="filterChannel(this, 'abnormal')">京东</span>
+          <span style="margin-left:16px;" class="filter-label">异常类型：</span>
+          <span class="filter-chip active" data-type="all" onclick="filterAbnormalType(this)">全部</span>
+          <span class="filter-chip" data-type="消耗" onclick="filterAbnormalType(this)">消耗异常</span>
+          <span class="filter-chip" data-type="ROI" onclick="filterAbnormalType(this)">ROI异常</span>
+          <span class="filter-chip" data-type="CPC" onclick="filterAbnormalType(this)">CPC异常</span>
+          <span class="filter-chip" data-type="CVR" onclick="filterAbnormalType(this)">CVR异常</span>
+        </div>
+
+        <div id="abnormalTableWrap"></div>
+
+        <!-- 异常趋势 -->
+        <div class="card" style="margin-top:16px;">
+          <div class="card-header">
+            <span class="card-title">📉 异常指标趋势</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container" id="abnormalTrendChart"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Upload Modal ===== -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📤 导入推广数据</h3>
+      <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📁</div>
+        <div class="text">点击选择或拖拽 <strong>Excel / CSV 文件</strong> 到此处</div>
+        <div class="hint">支持 .xlsx, .xls, .csv, .tsv 格式</div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.tsv" onchange="handleFileUpload(event)">
+      </div>
+      <div id="uploadPreview" style="display:none;margin-top:12px;"></div>
+      <div style="margin-top:12px;font-size:12px;color:var(--gray-400);">
+        <strong>数据格式要求：</strong>
+        列需包含：日期, 渠道, 店铺, 消耗, 成交金额等<br>
+        <strong>支持格式：</strong>
+        .xlsx / .csv（推荐CSV，无需联网）<br>
+        <strong>多表联动：</strong>
+        导入多个文件后，系统会自动以<strong>商品ID/SKU</strong>等共享字段为桥梁，合并所有表展示完整信息
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeUploadModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA LAYER
+// ============================================================
+const AppData = {
+  raw: [],
+  filtered: [],
+  dateRange: { start: null, end: null },
+  channelFilter: { channel: 'all', person: 'all', category: 'all', abnormal: 'all' },
+  abnormalTypeFilter: 'all',
+  currentPage: 'channel',
+};
+
+// ============================================================
+// 多表自动合并引擎（后台运行，无单独页面）
+// ============================================================
+const JOIN_KEYS = ['商品ID','商品编号','SKU','单品','商品名称','商品名','产品','产品名','spu','item_id','goods_id'];
+
+/** 检测数据中的关联键 */
+function detectJoinKeyInData(rows) {
+  if (!rows || rows.length === 0) return null;
+  const cols = Object.keys(rows[0]);
+  for (const jk of JOIN_KEYS) {
+    if (cols.includes(jk)) return jk;
+  }
+  const cleaned = cols.map(c => cleanStr(c));
+  for (let i = 0; i < cleaned.length; i++) {
+    for (const jk of JOIN_KEYS) {
+      if (cleaned[i] === cleanStr(jk)) return cols[i];
+    }
+  }
+  return null;
+}
+
+/** 智能合并新旧数据：新数据 LEFT JOIN 到旧数据上 */
+function smartMergeData(existing, newData) {
+  if (existing.length === 0) return [...newData];
+  if (newData.length === 0) return [...existing];
+
+  const existingCols = Object.keys(existing[0]);
+  const newCols = Object.keys(newData[0]);
+  const shared = existingCols.filter(c => newCols.includes(c));
+
+  if (shared.length === 0) {
+    // 无共享列：按行号拼合
+    const result = existing.map(row => ({ ...row }));
+    newData.forEach((row, i) => {
+      if (i < result.length) {
+        Object.keys(row).forEach(k => {
+          if (result[i][k] === undefined || result[i][k] === '') result[i][k] = row[k];
+        });
+      } else {
+        result.push({ ...row });
+      }
+    });
+    return result;
+  }
+
+  // 取第一个共享列做 LEFT JOIN
+  const jk = shared[0];
+  const lookup = {};
+  newData.forEach(r => {
+    const val = String(r[jk] || '').trim();
+    if (val) lookup[val] = r;
+  });
+
+  const result = existing.map(row => {
+    const newRow = { ...row };
+    const val = String(newRow[jk] || '').trim();
+    if (val && lookup[val]) {
+      Object.keys(lookup[val]).forEach(k => {
+        if (k !== jk && (newRow[k] === undefined || newRow[k] === '')) {
+          newRow[k] = lookup[val][k];
+        }
+      });
+    }
+    return newRow;
+  });
+
+  // 追加新数据中未匹配的行
+  const existingVals = new Set(existing.map(r => String(r[jk] || '').trim()).filter(Boolean));
+  newData.forEach(r => {
+    const val = String(r[jk] || '').trim();
+    if (val && !existingVals.has(val)) {
+      result.push({ ...r });
+    }
+  });
+
+  return result;
+}
+
+/** 导入并合并（不单独存表，避免超配额） */
+function processParsedDataMultitable(json, fileName) {
+  if (!json || json.length === 0) { alert('文件为空'); return; }
+  const normed = json.map(row => normalizeColumns(row));
+
+  // 加载现有合并数据
+  let existing = [];
+  try {
+    existing = JSON.parse(localStorage.getItem('promotionData') || '[]');
+  } catch(e) {}
+
+  // 智能合并
+  const merged = smartMergeData(existing, normed);
+
+  // 去重（基于所有字段）
+  const seen = new Set();
+  const deduped = [];
+  merged.forEach(row => {
+    const keys = Object.keys(row).sort();
+    const key = keys.map(k => `${k}:${row[k]}`).join('||');
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(row);
+    }
+  });
+
+  AppData.raw = deduped;
+  localStorage.setItem('promotionData', JSON.stringify(deduped));
+
+  const dupCount = merged.length - deduped.length;
+  let msg = `✅ 已导入「${fileName.replace(/\.(xlsx|xls|csv|tsv)$/i, '')}」(${normed.length}条) | 共${deduped.length}条`;
+  if (dupCount > 0) msg += ` · 去重${dupCount}条`;
+  showToast(msg);
+}
+
+// ============================================================
+// CORE FUNCTIONS
+// ============================================================
+function initDates() {
+  const today = dayjs().format('YYYY-MM-DD');
+  const thirtyDaysAgo = dayjs().subtract(30, 'day').format('YYYY-MM-DD');
+  document.getElementById('dateStart').value = thirtyDaysAgo;
+  document.getElementById('dateEnd').value = today;
+}
+
+function setDateRange() {
+  AppData.dateRange = {
+    start: document.getElementById('dateStart').value,
+    end: document.getElementById('dateEnd').value,
+  };
+}
+
+function applyFilters() {
+  setDateRange();
+  filterData();
+  renderCurrentPage();
+}
+
+function filterData() {
+  const { start, end } = AppData.dateRange || {};
+  const cf = AppData.channelFilter;
+  let data = AppData.raw;
+
+  if (start && end) {
+    data = data.filter(r => r['日期'] >= start && r['日期'] <= end);
+  }
+
+  if (cf.channel && cf.channel !== 'all') {
+    data = data.filter(r => r['渠道'] === cf.channel);
+  }
+
+  AppData.filtered = data;
+}
+
+function switchPage(page) {
+  AppData.currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+
+  const titles = { channel: '渠道汇总', person: '个人汇总', category: '品类板块', abnormal: '异常单品' };
+  const subtitles = { channel: 'Channel Summary', person: 'Personnel Summary', category: 'Category Segment', abnormal: 'Abnormal Alerts' };
+  document.getElementById('pageTitle').innerHTML = `${titles[page]} <small>${subtitles[page]}</small>`;
+
+  renderCurrentPage();
+}
+
+function renderCurrentPage() {
+  const pages = { channel: renderChannelPage, person: renderPersonPage, category: renderCategoryPage, abnormal: renderAbnormalPage };
+  if (pages[AppData.currentPage]) pages[AppData.currentPage]();
+}
+
+// ============================================================
+// CHANNEL FILTER (cascading)
+// ============================================================
+function filterChannel(el, page) {
+  document.querySelectorAll(`#page-${page} .filter-chip[data-channel]`).forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  AppData.channelFilter[page === 'abnormal' ? 'abnormal' : page] = el.dataset.channel;
+  AppData.channelFilter.channel = el.dataset.channel;
+  filterData();
+  renderCurrentPage();
+}
+
+function filterAbnormalType(el) {
+  document.querySelectorAll('#page-abnormal .filter-chip[data-type]').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  AppData.abnormalTypeFilter = el.dataset.type;
+  renderAbnormalPage();
+}
+
+// ============================================================
+// NUMBER FORMATTING
+// ============================================================
+function fmt(n) {
+  if (n === undefined || n === null || isNaN(n)) return '0';
+  if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
+  return n.toLocaleString();
+}
+function fmtMoney(n) {
+  if (n === undefined || n === null || isNaN(n)) return '¥0';
+  if (n >= 10000) return '¥' + (n / 10000).toFixed(1) + 'w';
+  return '¥' + n.toLocaleString();
+}
+function fmtPct(n) {
+  if (n === undefined || n === null || isNaN(n)) return '0%';
+  return n + '%';
+}
+function sum(arr, key) { return arr.reduce((s, r) => s + (parseFloat(r[key]) || 0), 0); }
+function avg(arr, key) { return arr.length ? sum(arr, key) / arr.length : 0; }
+
+// ============================================================
+// PAGE: 渠道汇总
+// ============================================================
+function renderChannelPage() {
+  const data = AppData.filtered;
+  const cf = AppData.channelFilter;
+  const channel = cf.channel === 'all' ? null : cf.channel;
+
+  // Stats row
+  const totalSpend = sum(data, '消耗');
+  const totalRevenue = sum(data, '成交金额');
+  const totalOrders = sum(data, '订单量');
+  const avgROI = totalSpend ? (totalRevenue / totalSpend).toFixed(2) : '0';
+  const storeCount = new Set(data.map(r => r['店铺'])).size;
+
+  document.getElementById('channelStats').innerHTML = `
+    <div class="stat-card"><div class="label">总消耗</div><div class="value">${fmtMoney(totalSpend)}</div></div>
+    <div class="stat-card orange"><div class="label">总成交金额</div><div class="value">${fmtMoney(totalRevenue)}</div></div>
+    <div class="stat-card green"><div class="label">总 ROI</div><div class="value">${avgROI}</div></div>
+    <div class="stat-card"><div class="label">总订单量</div><div class="value">${totalOrders.toLocaleString()}</div></div>
+    <div class="stat-card orange"><div class="label">店铺数</div><div class="value">${storeCount}</div></div>
+  `;
+
+  // Store aggregation
+  const shops = {};
+  data.forEach(r => {
+    const s = r['店铺'];
+    if (!shops[s]) shops[s] = { name: s, channel: r['渠道'], spend:0, revenue:0, orders:0, clicks:0, roi:0, cpc:0, cvr:0, count:0 };
+    shops[s].spend += parseFloat(r['消耗']) || 0;
+    shops[s].revenue += parseFloat(r['成交金额']) || 0;
+    shops[s].orders += parseInt(r['订单量']) || 0;
+    shops[s].clicks += parseInt(r['点击量']) || 0;
+    shops[s].count++;
+  });
+  Object.values(shops).forEach(s => {
+    s.roi = s.spend ? (s.revenue / s.spend).toFixed(2) : '0';
+    s.cpc = s.clicks ? (s.spend / s.clicks).toFixed(2) : '0';
+    s.cvr = s.clicks ? ((s.orders / s.clicks) * 100).toFixed(1) : '0';
+  });
+
+  // Mind map order: 天猫 → 绿巨能旗舰店, 绿巨能数码旗舰店 | 京东 → 京东自营, 京东POP, MR.GREEN
+  const tmallStores = ['绿巨能旗舰店','绿巨能数码旗舰店'];
+  const jdStores = ['京东自营','京东POP','MR.GREEN'];
+
+  function renderStoreCard(s) {
+    if (!s) return '';
+    if (channel && s.channel !== channel) return '';
+    const avatarClass = s.channel === '天猫' ? 'tmall' : (s.name === 'MR.GREEN' ? 'mrgreen' : 'jd');
+    return `
+      <div class="store-card fade-in">
+        <div class="store-top">
+          <div class="store-avatar ${avatarClass}">${s.name[0]}</div>
+          <div>
+            <div class="store-name">${s.name}</div>
+            <div class="store-platform">${s.channel} · ${s.count}条记录</div>
+          </div>
+        </div>
+        <div class="store-stats">
+          <div class="store-stat"><div class="val">${fmtMoney(s.spend)}</div><div class="lbl">消耗</div></div>
+          <div class="store-stat"><div class="val">${fmtMoney(s.revenue)}</div><div class="lbl">成交金额</div></div>
+          <div class="store-stat"><div class="val">${s.roi}</div><div class="lbl">ROI</div></div>
+          <div class="store-stat"><div class="val">${s.cpc}</div><div class="lbl">CPC</div></div>
+          <div class="store-stat"><div class="val">${s.cvr}%</div><div class="lbl">CVR</div></div>
+          <div class="store-stat"><div class="val">${s.orders}</div><div class="lbl">订单量</div></div>
+        </div>
+      </div>`;
+  }
+
+  // Render 天猫 group
+  const tmallHtml = tmallStores.map(name => renderStoreCard(shops[name])).filter(h => h).join('');
+  document.getElementById('tmallStores').innerHTML = tmallHtml || '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">暂无天猫店铺数据</div>';
+  document.getElementById('tmallGroup').style.display = (channel && channel !== '天猫' && tmallHtml === '') ? 'none' : '';
+
+  // Render 京东 group
+  const jdHtml = jdStores.map(name => renderStoreCard(shops[name])).filter(h => h).join('');
+  document.getElementById('jdStores').innerHTML = jdHtml || '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">暂无京东店铺数据</div>';
+  document.getElementById('jdGroup').style.display = (channel && channel !== '京东' && jdHtml === '') ? 'none' : '';
+
+  // 百分比图
+  renderChannelPieChart(shops, channel);
+
+  // Trend chart
+  renderChannelTrendChart(data, channel);
+}
+
+/** 渠道消耗占比饼图（百分比图） */
+function renderChannelPieChart(shops, channel) {
+  const chartDom = document.getElementById('channelPieChart');
+  let myChart = echarts.getInstanceByDom(chartDom);
+  if (!myChart) myChart = echarts.init(chartDom);
+  chartDom.__chart = myChart;
+
+  const allStores = Object.values(shops).filter(s => !channel || s.channel === channel);
+  const total = allStores.reduce((s, v) => s + v.spend, 0);
+  if (total === 0) {
+    myChart.setOption({
+      title: { text: '暂无数据', left: 'center', top: 'center', textStyle: { color: '#BDBDBD', fontSize: 14 } },
+      series: []
+    }, true);
+    myChart.resize();
+    return;
+  }
+
+  // 按渠道颜色区分：天猫=橙色系, 京东=蓝色系, MR.GREEN=绿色
+  const colorMap = {
+    '绿巨能旗舰店': '#FF6D00',
+    '绿巨能数码旗舰店': '#FF9100',
+    '京东自营': '#1565C0',
+    '京东POP': '#42A5F5',
+    'MR.GREEN': '#2E7D32',
+  };
+  // 未匹配的店铺用灰色
+  const colors = allStores.map(s => colorMap[s.name] || '#9E9E9E');
+
+  const pieData = allStores.map(s => ({
+    name: s.name,
+    value: s.spend,
+    itemStyle: { color: colorMap[s.name] || '#9E9E9E' },
+  }));
+
+  myChart.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: function(params) {
+        const pct = params.percent;
+        const money = fmtMoney(params.value);
+        return `<strong>${params.name}</strong><br/>消耗：${money}<br/>占比：${pct}%`;
+      }
+    },
+    legend: {
+      orient: 'vertical',
+      right: 10,
+      top: 'center',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: { fontSize: 11 },
+    },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['35%', '50%'],
+      avoidLabelOverlap: true,
+      padAngle: 2,
+      itemStyle: {
+        borderRadius: 4,
+        borderColor: '#fff',
+        borderWidth: 2,
+      },
+      label: {
+        show: false,
+      },
+      emphasis: {
+        label: {
+          show: true,
+          fontSize: 14,
+          fontWeight: 'bold',
+        },
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)',
+        }
+      },
+      labelLine: { show: false },
+      data: pieData,
+    }],
+  }, true);
+  myChart.resize();
+}
+
+function renderChannelTrendChart(data, channel) {
+  const chartDom = document.getElementById('channelTrendChart');
+  let myChart = echarts.getInstanceByDom(chartDom);
+  if (!myChart) myChart = echarts.init(chartDom);
+  chartDom.__chart = myChart;
+
+  // Group by date+channel
+  const daily = {};
+  data.forEach(r => {
+    const key = r['日期'] + '|' + r['渠道'];
+    if (!daily[key]) daily[key] = { date: r['日期'], channel: r['渠道'], spend: 0, revenue: 0, orders: 0 };
+    daily[key].spend += parseFloat(r['消耗']) || 0;
+    daily[key].revenue += parseFloat(r['成交金额']) || 0;
+    daily[key].orders += parseInt(r['订单量']) || 0;
+  });
+
+  const dates = [...new Set(data.map(r => r['日期']))].sort();
+  const channels = channel ? [channel] : ['天猫','京东'];
+
+  const series = channels.map(ch => {
+    const values = dates.map(d => {
+      const k = d + '|' + ch;
+      return daily[k] ? daily[k].spend : 0;
+    });
+    return {
+      name: ch + ' 消耗',
+      type: 'line',
+      smooth: true,
+      data: values,
+      symbol: 'circle',
+      symbolSize: 4,
+      lineStyle: { width: 2 },
+    };
+  });
+
+  // Add revenue series
+  channels.forEach(ch => {
+    const values = dates.map(d => {
+      const k = d + '|' + ch;
+      return daily[k] ? daily[k].revenue : 0;
+    });
+    series.push({
+      name: ch + ' 成交',
+      type: 'line',
+      smooth: true,
+      data: values,
+      symbol: 'diamond',
+      symbolSize: 4,
+      lineStyle: { width: 2, type: 'dashed' },
+    });
+  });
+
+  const colors = channel ? ['#1565C0','#1565C0'] : ['#FF6D00','#1565C0','#FF6D00','#1565C0'];
+  const legendData = channels.flatMap(ch => [ch + ' 消耗', ch + ' 成交']);
+
+  myChart.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: legendData, bottom: 0, icon: 'circle', itemWidth: 8 },
+    grid: { left: 50, right: 20, top: 20, bottom: 40 },
+    xAxis: { type: 'category', data: dates, axisLabel: { rotate: 30, fontSize: 10 } },
+    yAxis: { type: 'value', name: '金额 (元)' },
+    color: colors,
+    series,
+  }, true);
+  myChart.resize();
+}
+
+// ============================================================
+// PAGE: 个人汇总
+// ============================================================
+function renderPersonPage() {
+  const data = AppData.filtered;
+  const cf = AppData.channelFilter;
+  const channel = cf.channel === 'all' ? null : cf.channel;
+
+  // Stats
+  const totalSpend = sum(data, '消耗');
+  const totalRevenue = sum(data, '成交金额');
+  const totalOrders = sum(data, '订单量');
+  const avgROI = totalSpend ? (totalRevenue / totalSpend).toFixed(2) : '0';
+  const peopleCount = new Set(data.filter(r => r['负责人']).map(r => r['负责人'])).size;
+
+  document.getElementById('personStats').innerHTML = `
+    <div class="stat-card"><div class="label">总消耗</div><div class="value">${fmtMoney(totalSpend)}</div></div>
+    <div class="stat-card orange"><div class="label">总成交</div><div class="value">${fmtMoney(totalRevenue)}</div></div>
+    <div class="stat-card green"><div class="label">平均 ROI</div><div class="value">${avgROI}</div></div>
+    <div class="stat-card orange"><div class="label">操作人数</div><div class="value">${peopleCount}</div></div>
+    <div class="stat-card"><div class="label">总订单</div><div class="value">${totalOrders.toLocaleString()}</div></div>
+  `;
+
+  // Person aggregation
+  const persons = {};
+  data.forEach(r => {
+    const name = r['负责人'];
+    if (!name) return;
+    if (!persons[name]) persons[name] = { name, channel: r['渠道'], spend:0, revenue:0, orders:0, clicks:0, shops: new Set() };
+    persons[name].spend += parseFloat(r['消耗']) || 0;
+    persons[name].revenue += parseFloat(r['成交金额']) || 0;
+    persons[name].orders += parseInt(r['订单量']) || 0;
+    persons[name].clicks += parseInt(r['点击量']) || 0;
+    persons[name].shops.add(r['店铺']);
+  });
+  Object.values(persons).forEach(p => {
+    p.roi = p.spend ? (p.revenue / p.spend).toFixed(2) : '0';
+    p.cpc = p.clicks ? (p.spend / p.clicks).toFixed(2) : '0';
+    p.shopList = [...p.shops].join(', ');
+  });
+
+  // Predefined person lists from mind map
+  const tmallPeople = ['梧桐','小鱼','超超','七七','洁凤','清晨','予安','行秋','武松','铁蛋'];
+  const jdPeople = ['小赞','木子','可可','附子','胖咯','云海','嘉嘉','雪莲'];
+
+  // Highlight org members with data
+  function updateOrgMembers(membersId, predefined, channelName) {
+    const container = document.getElementById(membersId);
+    if (!container) return;
+    const chips = container.querySelectorAll('.member-chip');
+    let hasDataCount = 0;
+    chips.forEach(chip => {
+      const name = chip.dataset.name;
+      const p = persons[name];
+      if (p && p.spend > 0) {
+        chip.style.background = channelName === '天猫' ? 'var(--orange-bg)' : 'var(--blue-bg)';
+        chip.style.color = channelName === '天猫' ? 'var(--orange)' : 'var(--blue)';
+        chip.style.borderColor = channelName === '天猫' ? 'var(--orange)' : 'var(--blue)';
+        hasDataCount++;
+      }
+    });
+    return hasDataCount;
+  }
+
+  const tmallActive = updateOrgMembers('tmallOrgMembers', tmallPeople, '天猫');
+  const jdActive = updateOrgMembers('jdOrgMembers', jdPeople, '京东');
+
+  document.getElementById('tmallPersonCount').textContent = `${tmallPeople.length}人${tmallActive > 0 ? ` · ${tmallActive}人有数据` : ''}`;
+  document.getElementById('jdPersonCount').textContent = `${jdPeople.length}人${jdActive > 0 ? ` · ${jdActive}人有数据` : ''}`;
+
+  // Org summary data
+  function renderOrgData(containerId, predefined, channelName) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const members = predefined.map(name => persons[name]).filter(Boolean);
+    const totalSpend = members.reduce((s, p) => s + p.spend, 0);
+    const totalRev = members.reduce((s, p) => s + p.revenue, 0);
+    const totalOrd = members.reduce((s, p) => s + p.orders, 0);
+    const avgRoi = totalSpend ? (totalRev / totalSpend).toFixed(2) : '0';
+    container.innerHTML = `
+      <div class="org-data-item"><div class="od-val">${fmtMoney(totalSpend)}</div><div class="od-lbl">总消耗</div></div>
+      <div class="org-data-item"><div class="od-val">${fmtMoney(totalRev)}</div><div class="od-lbl">总成交</div></div>
+      <div class="org-data-item"><div class="od-val">${avgRoi}</div><div class="od-lbl">平均ROI</div></div>
+      <div class="org-data-item"><div class="od-val">${totalOrd}</div><div class="od-lbl">总订单</div></div>
+    `;
+  }
+  renderOrgData('tmallOrgData', tmallPeople, '天猫');
+  renderOrgData('jdOrgData', jdPeople, '京东');
+
+  // ---- Detailed person cards (existing logic) ----
+  const avatarColors = ['#1565C0','#FF6D00','#2E7D32','#6A1B9A','#00838F','#E65100','#37474F','#4E342E','#01579B','#33691E',
+    '#0D47A1','#BF360C','#1B5E20','#4A148C','#006064','#3E2723','#263238','#004D40'];
+
+  // Group by channel
+  const groups = { '天猫': [], '京东': [] };
+  Object.values(persons).forEach(p => {
+    if (channel && p.channel !== channel) return;
+    if (groups[p.channel]) groups[p.channel].push(p);
+  });
+
+  let html = '';
+  ['天猫','京东'].forEach(ch => {
+    const list = groups[ch] || [];
+    if (list.length === 0 && !channel) return;
+    if (channel && ch !== channel) return;
+    const isTmall = ch === '天猫';
+    const badgeClass = isTmall ? 'tmall' : 'jd';
+    html += `
+      <div class="card fade-in">
+        <div class="card-header">
+          <span class="card-title">${isTmall ? '🏪' : '🛒'} ${ch} · ${list.length}人</span>
+          <span class="card-badge ${badgeClass}">${ch}</span>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));">
+            ${list.sort((a,b) => b.spend - a.spend).map((p, i) => {
+              const ci = i % avatarColors.length;
+              return `
+                <div class="person-card">
+                  <div class="person-avatar" style="background:${avatarColors[ci]}">${p.name[0]}</div>
+                  <div class="person-info">
+                    <div class="name">${p.name}</div>
+                    <div class="meta">${p.shopList}</div>
+                  </div>
+                  <div class="person-stats">
+                    <div class="ps"><div class="pv">${fmtMoney(p.spend)}</div><div class="pl">消耗</div></div>
+                    <div class="ps"><div class="pv">${fmtMoney(p.revenue)}</div><div class="pl">成交</div></div>
+                    <div class="ps"><div class="pv">${p.roi}</div><div class="pl">ROI</div></div>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('personGroupGrid').innerHTML = html || '<div class="no-data"><div class="icon">👥</div><div class="text">暂无数据，请导入或切换渠道</div></div>';
+}
+
+// ============================================================
+// PAGE: 品类板块
+// ============================================================
+function renderCategoryPage() {
+  const data = AppData.filtered;
+  const cf = AppData.channelFilter;
+  const channel = cf.channel === 'all' ? null : cf.channel;
+  const selCat = document.getElementById('categorySelect').value;
+
+  // Populate category select
+  const cats = [...new Set(data.map(r => r['品类']).filter(Boolean))].sort();
+  const selHtml = '<option value="all">全部品类</option>' + cats.map(c => `<option value="${c}" ${c === selCat ? 'selected' : ''}>${c}</option>`).join('');
+  document.getElementById('categorySelect').innerHTML = selHtml;
+
+  // Stats
+  const totalSpend = sum(data, '消耗');
+  const totalRevenue = sum(data, '成交金额');
+  const totalOrders = sum(data, '订单量');
+  const avgROI = totalSpend ? (totalRevenue / totalSpend).toFixed(2) : '0';
+
+  document.getElementById('categoryStats').innerHTML = `
+    <div class="stat-card"><div class="label">总消耗</div><div class="value">${fmtMoney(totalSpend)}</div></div>
+    <div class="stat-card orange"><div class="label">总成交</div><div class="value">${fmtMoney(totalRevenue)}</div></div>
+    <div class="stat-card green"><div class="label">总 ROI</div><div class="value">${avgROI}</div></div>
+    <div class="stat-card"><div class="label">品类数</div><div class="value">${cats.length}</div></div>
+    <div class="stat-card orange"><div class="label">订单量</div><div class="value">${totalOrders.toLocaleString()}</div></div>
+  `;
+
+  // Category aggregation
+  const catData = {};
+  data.forEach(r => {
+    const cat = r['品类'];
+    if (!cat) return;
+    if (selCat !== 'all' && cat !== selCat) return;
+    if (channel && r['渠道'] !== channel) return;
+    if (!catData[cat]) catData[cat] = { name: cat, spend:0, revenue:0, orders:0, clicks:0, items: new Set(), channels: new Set() };
+    catData[cat].spend += parseFloat(r['消耗']) || 0;
+    catData[cat].revenue += parseFloat(r['成交金额']) || 0;
+    catData[cat].orders += parseInt(r['订单量']) || 0;
+    catData[cat].clicks += parseInt(r['点击量']) || 0;
+    if (r['单品']) catData[cat].items.add(r['单品']);
+    if (r['推广渠道']) catData[cat].channels.add(r['推广渠道']);
+  });
+
+  const colors = ['#1565C0','#FF6D00','#2E7D32','#6A1B9A','#00838F','#E65100','#37474F','#4E342E'];
+
+  let html = '';
+  Object.entries(catData).sort((a,b) => b[1].spend - a[1].spend).forEach(([cat, cd], i) => {
+    const roi = cd.spend ? (cd.revenue / cd.spend).toFixed(2) : '0';
+    const cpc = cd.clicks ? (cd.spend / cd.clicks).toFixed(2) : '0';
+    html += `
+      <div class="card fade-in">
+        <div class="card-header">
+          <span class="card-title"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${colors[i % colors.length]}"></span> ${cat}</span>
+          <span class="card-badge tmall">${cd.items.size}个单品 · ${cd.channels.size}个渠道</span>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${fmtMoney(cd.spend)}</div><div style="font-size:11px;color:var(--gray-400);">消耗</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${fmtMoney(cd.revenue)}</div><div style="font-size:11px;color:var(--gray-400);">成交</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${roi}</div><div style="font-size:11px;color:var(--gray-400);">ROI</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${cpc}</div><div style="font-size:11px;color:var(--gray-400);">CPC</div></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">
+            ${[...cd.channels].map(ch => `<span style="padding:2px 8px;background:var(--blue-bg);color:var(--blue);border-radius:10px;font-size:11px;font-weight:500;">${ch}</span>`).join('')}
+          </div>
+          <div style="margin-top:8px;">
+            <div style="font-size:12px;color:var(--gray-400);font-weight:500;margin-bottom:4px;">单品列表：</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">
+              ${[...cd.items].map(item => `<span style="padding:2px 8px;background:var(--orange-bg);color:var(--orange);border-radius:10px;font-size:11px;">${item}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('categoryGrid').innerHTML = html || '<div class="no-data"><div class="icon">📦</div><div class="text">暂无数据</div></div>';
+}
+
+// ============================================================
+// PAGE: 异常单品
+// ============================================================
+function renderAbnormalPage() {
+  const data = AppData.filtered;
+  const cf = AppData.channelFilter;
+  const channel = cf.channel === 'all' ? null : cf.channel;
+  const typeFilter = AppData.abnormalTypeFilter;
+
+  // Compute abnormal items
+  const items = {};
+  data.forEach(r => {
+    const key = r['单品'] || '未知';
+    if (!items[key]) items[key] = { name: key, cat: r['品类'], channel: r['渠道'], shop: r['店铺'], spend:0, revenue:0, orders:0, clicks:0, count:0 };
+    items[key].spend += parseFloat(r['消耗']) || 0;
+    items[key].revenue += parseFloat(r['成交金额']) || 0;
+    items[key].orders += parseInt(r['订单量']) || 0;
+    items[key].clicks += parseInt(r['点击量']) || 0;
+    items[key].count++;
+  });
+
+  // Compute averages for threshold detection
+  const allSpends = Object.values(items).map(i => i.spend);
+  const avgSpend = allSpends.length ? allSpends.reduce((a,b) => a+b, 0) / allSpends.length : 0;
+
+  Object.values(items).forEach(i => {
+    i.roi = i.spend ? (i.revenue / i.spend) : 0;
+    i.cpc = i.clicks ? (i.spend / i.clicks) : 0;
+    i.cvr = i.clicks ? ((i.orders / i.clicks) * 100) : 0;
+
+    // Detect anomalies
+    i.abnormal = [];
+    // Spend异常: > 2x average
+    if (avgSpend > 0 && i.spend > avgSpend * 2) i.abnormal.push({ type: '消耗', val: i.spend, threshold: avgSpend * 2 });
+    // ROI异常: < 1.5
+    if (i.roi < 1.5 && i.spend > 0) i.abnormal.push({ type: 'ROI', val: i.roi, threshold: 1.5 });
+    // CPC异常: > 10
+    if (i.cpc > 10 && i.spend > 0) i.abnormal.push({ type: 'CPC', val: i.cpc, threshold: 10 });
+    // CVR异常: < 1%
+    if (i.cvr < 1 && i.clicks > 0) i.abnormal.push({ type: 'CVR', val: i.cvr, threshold: 1 });
+
+    i.status = i.abnormal.length > 0 ? (i.abnormal.length > 1 ? 'danger' : 'warning') : 'normal';
+  });
+
+  let abnormalItems = Object.values(items).filter(i => i.abnormal.length > 0);
+  if (channel) abnormalItems = abnormalItems.filter(i => i.channel === channel);
+  if (typeFilter !== 'all') abnormalItems = abnormalItems.filter(i => i.abnormal.some(a => a.type === typeFilter));
+
+  // Stats
+  document.getElementById('abnormalStats').innerHTML = `
+    <div class="stat-card"><div class="label">异常单品数</div><div class="value">${abnormalItems.length}</div></div>
+    <div class="stat-card orange"><div class="label">异常总消耗</div><div class="value">${fmtMoney(sum(abnormalItems, 'spend'))}</div></div>
+    <div class="stat-card green"><div class="label">平均 ROI</div><div class="value">${abnormalItems.length ? (sum(abnormalItems,'revenue') / (sum(abnormalItems,'spend')||1)).toFixed(2) : '0'}</div></div>
+    <div class="stat-card"><div class="label">严重异常(≥2项)</div><div class="value">${abnormalItems.filter(i => i.abnormal.length > 1).length}</div></div>
+    <div class="stat-card orange"><div class="label">总异常订单</div><div class="value">${sum(abnormalItems, 'orders')}</div></div>
+  `;
+  document.getElementById('abnormalBadge').textContent = abnormalItems.length;
+
+  // Table
+  let html = '';
+  if (abnormalItems.length === 0) {
+    html = '<div class="no-data"><div class="icon">✅</div><div class="text">暂无异常单品</div></div>';
+  } else {
+    html = `<table class="abnormal-table">
+      <thead><tr>
+        <th>单品</th><th>品类</th><th>渠道</th><th>店铺</th>
+        <th>消耗</th><th>ROI</th><th>CPC</th><th>CVR</th>
+        <th>异常项</th><th>状态</th>
+      </tr></thead><tbody>
+      ${abnormalItems.sort((a,b) => b.abnormal.length - a.abnormal.length || b.spend - a.spend).map(i => `
+        <tr>
+          <td><strong>${i.name}</strong></td>
+          <td>${i.cat || '-'}</td>
+          <td><span style="color:${i.channel === '天猫' ? 'var(--orange)' : 'var(--blue)'}">${i.channel}</span></td>
+          <td>${i.shop}</td>
+          <td>${fmtMoney(i.spend)}</td>
+          <td style="color:${i.roi < 1.5 ? '#D32F2F' : '#2E7D32'}">${i.roi.toFixed(2)}</td>
+          <td>${i.cpc.toFixed(2)}</td>
+          <td>${i.cvr.toFixed(1)}%</td>
+          <td>${i.abnormal.map(a => `<span class="status-badge ${a.type === '消耗' ? 'warning' : 'danger'}" style="margin-right:4px;">${a.type}</span>`).join('')}</td>
+          <td><span class="status-badge ${i.status}">${i.status === 'danger' ? '严重' : (i.status === 'warning' ? '警告' : '正常')}</span></td>
+        </tr>
+      `).join('')}
+      </tbody></table>`;
+  }
+  document.getElementById('abnormalTableWrap').innerHTML = html;
+
+  // Trend chart
+  renderAbnormalTrendChart(data, channel);
+}
+
+function renderAbnormalTrendChart(data, channel) {
+  const chartDom = document.getElementById('abnormalTrendChart');
+  let myChart = echarts.getInstanceByDom(chartDom);
+  if (!myChart) myChart = echarts.init(chartDom);
+  chartDom.__chart = myChart;
+
+  const dates = [...new Set(data.map(r => r['日期']))].sort();
+  const metrics = ['消耗','ROI','CPC','CVR'];
+  const colors = ['#D32F2F','#FF6D00','#1565C0','#2E7D32'];
+
+  // Compute daily averages
+  const dailyMetrics = dates.map(d => {
+    const dayData = data.filter(r => r['日期'] === d && (!channel || r['渠道'] === channel));
+    const spend = sum(dayData, '消耗');
+    const revenue = sum(dayData, '成交金额');
+    const clicks = sum(dayData, '点击量');
+    const orders = sum(dayData, '订单量');
+    return {
+      date: d,
+      spend,
+      roi: spend ? revenue / spend : 0,
+      cpc: clicks ? spend / clicks : 0,
+      cvr: clicks ? (orders / clicks) * 100 : 0,
+    };
+  });
+
+  // Use first metric as primary (spend)
+  const series = metrics.map((m, i) => {
+    const values = dailyMetrics.map(d => {
+      if (m === '消耗') return d.spend;
+      if (m === 'ROI') return d.roi;
+      if (m === 'CPC') return d.cpc;
+      if (m === 'CVR') return d.cvr;
+      return 0;
+    });
+    return {
+      name: m,
+      type: 'line',
+      smooth: true,
+      data: values,
+      symbol: 'circle',
+      symbolSize: 3,
+      lineStyle: { width: 1.5 },
+    };
+  });
+
+  myChart.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: metrics, bottom: 0, icon: 'circle', itemWidth: 8 },
+    grid: { left: 50, right: 20, top: 20, bottom: 40 },
+    xAxis: { type: 'category', data: dates, axisLabel: { rotate: 30, fontSize: 10 } },
+    yAxis: { type: 'value' },
+    color: colors,
+    series,
+  }, true);
+  myChart.resize();
+}
+
+// ============================================================
+// UPLOAD / FILE HANDLING
+// ============================================================
+let uploadedData = null;
+
+function openUploadModal() {
+  document.getElementById('uploadModal').classList.add('show');
+  document.getElementById('uploadPreview').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  uploadedData = null;
+  document.querySelector('.upload-zone .text').innerHTML = '点击选择或拖拽 <strong>Excel / CSV 文件</strong> 到此处';
+  document.querySelector('.upload-zone .hint').textContent = '支持 .xlsx, .xls, .csv, .tsv 格式';
+}
+
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('show');
+}
+
+// ========== CSV Parser (no CDN needed) ==========
+function parseCSV(text, delimiter) {
+  const lines = text.split(/\r?\n/).filter(line => line.trim());
+  if (lines.length < 2) return [];
+  
+  // Parse header
+  const headers = parseCSVLine(lines[0], delimiter).map(h => h.trim());
+  
+  // Parse rows
+  const result = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCSVLine(lines[i], delimiter);
+    if (vals.length === 0 || vals.every(v => !v.trim())) continue;
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h] = (vals[idx] || '').trim();
+    });
+    result.push(row);
+  }
+  return result;
+}
+
+function parseCSVLine(line, delimiter) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === delimiter && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+// ========== Column name normalization ==========
+// 多层级智能列名匹配引擎
+// 策略1: 精确别名匹配
+// 策略2: 降噪后匹配（去空格、下划线、连字符）
+// 策略3: 关键词包含匹配（标准字段的关键词出现在列名中）
+// 策略4: 拼音/缩写匹配
+
+const COLUMN_ALIASES = {
+  '日期': ['日期','date','day','时间','日','dat','日　期','data','年月日'],
+  '渠道': ['渠道','平台','channel','平台类型','渠　道','plat','渠道类型','所属平台'],
+  '店铺': ['店铺','店','store','shop','门店','店名','店铺名','铺','商店','商城'],
+  '负责人': ['负责人','运营','person','owner','操作人','运营人','操作者','运营专员','推广人','管理员','账号负责人','投手'],
+  '品类': ['品类','类目','category','分类','产品类目','产品分类','商品品类','商品类目','cat','类别','产品线'],
+  '单品': ['单品','商品','产品','sku','product','item','商品名称','产品名称','商品名','产品名','宝贝','spu','item_name','goods_name'],
+  '推广渠道': ['推广渠道','推广方式','广告渠道','promotion','渠道类型','广告类型','推广类型','推广工具','广告位','投放渠道','投放方式','广告形式','流量来源','媒介','媒体'],
+  '消耗': ['消耗','花费','spend','消费','支出','广告花费','推广花费','费用','广告费','推广费','总花费','实际消耗','现金消耗','消耗金额','耗用','扣费'],
+  '展现量': ['展现量','曝光','impressions','展示量','曝光量','展示次数','曝光次数','impression','pv','浏览量','展现'],
+  '点击量': ['点击量','点击','clicks','点击数','click','点击次数','点击率基数','访客点击'],
+  'ROI': ['roi','ROI','投产比','投入产出比','投资回报率','投入产出','投产','roas','ROAS','回报率'],
+  'CPC': ['cpc','CPC','点击单价','平均点击花费','单次点击成本','平均点击价格','ppc'],
+  'CVR': ['cvr','CVR','转化率','点击转化率','下单转化率','成交转化率','转化','conversion'],
+  '成交金额': ['成交金额','销售额','成交额','gmv','GMV','revenue','销售金额','营业额','交易额','销售总额','总销售额','支付金额','实付金额','交易金额','gmv金额','sales'],
+  '订单量': ['订单量','订单数','orders','成交单数','成交量','总订单','order_count','成交笔数','销售数量','总单数'],
+};
+
+// 关键词匹配规则：<关键词> → <标准字段>
+// 当精确和降噪匹配都失败时，用关键词做包含匹配
+const KEYWORD_RULES = [
+  // 日期类
+  { keywords: ['日期','date','年月日','时间','日'], target: '日期' },
+  // 渠道类
+  { keywords: ['渠道','平台'], target: '渠道' },
+  // 店铺类
+  { keywords: ['店铺','门店','商店','店名','店铺名','店铺名称'], target: '店铺' },
+  // 负责人
+  { keywords: ['负责人','运营','投手','操作','管理员','专员'], target: '负责人' },
+  // 品类
+  { keywords: ['品类','类目','分类','类别','产品线'], target: '品类' },
+  // 单品
+  { keywords: ['单品','商品','产品','宝贝','sku','spu','item','goods'], target: '单品' },
+  // 推广渠道
+  { keywords: ['推广','广告','投放','渠道','媒介','流量来源'], target: '推广渠道' },
+  // 消耗
+  { keywords: ['消耗','花费','费用','花','耗','费','spend','支出','扣','广告费','推广费'], target: '消耗' },
+  // 展现量
+  { keywords: ['展现','曝光','显示','pv','impression','展示量','浏览量','曝光量'], target: '展现量' },
+  // 点击量
+  { keywords: ['点击','click','点击数','点击量','clicks'], target: '点击量' },
+  // ROI
+  { keywords: ['roi','投产','投入产出','回报率','roas'], target: 'ROI' },
+  // CPC
+  { keywords: ['cpc','ppc','点击单价','点击花费'], target: 'CPC' },
+  // CVR
+  { keywords: ['cvr','转化率','转化'], target: 'CVR' },
+  // 成交金额
+  { keywords: ['成交','金额','销售','gmv','revenue','交易','支付','实付','营业额','销售额','收入'], target: '成交金额' },
+  // 订单量
+  { keywords: ['订单','单数','orders','成交量','笔数','单量','order'], target: '订单量' },
+];
+
+// 拼音/缩写映射（常见电商字段缩写）
+const ABBR_MAP = {
+  'rq': '日期', 'sj': '日期',  // 日期
+  'qd': '渠道', 'pt': '渠道',  // 渠道
+  'dp': '店铺',  // 店铺
+  'fzr': '负责人', 'yy': '负责人',  // 负责人
+  'pl': '品类', 'lm': '品类', 'lb': '品类',  // 品类
+  'dp': '单品', 'sp': '单品', 'cp': '单品',  // 单品
+  'tgqd': '推广渠道', 'tgfs': '推广渠道',  // 推广渠道
+  'xh': '消耗', 'hf': '消耗', 'fy': '消耗',  // 消耗
+  'zxl': '展现量', 'bgl': '展现量',  // 展现量
+  'djl': '点击量', 'dj': '点击量',  // 点击量
+  'ddl': '订单量', 'dds': '订单量', 'cjl': '订单量',  // 订单量
+};
+
+// 清理字符串：去空格、去下划线、去连字符、转为小写
+function cleanStr(s) {
+  return s.replace(/[\s_\-‐—－·•/\\,，、　]+/g, '').toLowerCase();
+}
+
+function normalizeColumns(row) {
+  const norm = {};
+  const rawKeys = Object.keys(row);
+
+  rawKeys.forEach(k => {
+    const trimmed = k.trim();
+    let matched = false;
+
+    // === 策略1: 精确别名匹配 ===
+    for (const [standard, aliases] of Object.entries(COLUMN_ALIASES)) {
+      if (aliases.some(a => a.toLowerCase() === trimmed.toLowerCase())) {
+        norm[standard] = row[k];
+        matched = true;
+        break;
+      }
+    }
+    if (matched) return;
+
+    // === 策略2: 降噪后匹配（去空格、下划线等） ===
+    const cleaned = cleanStr(trimmed);
+    for (const [standard, aliases] of Object.entries(COLUMN_ALIASES)) {
+      if (aliases.some(a => cleanStr(a) === cleaned)) {
+        norm[standard] = row[k];
+        matched = true;
+        break;
+      }
+    }
+    if (matched) return;
+
+    // === 策略3: 拼音/缩写匹配 ===
+    if (ABBR_MAP[cleaned]) {
+      norm[ABBR_MAP[cleaned]] = row[k];
+      return;
+    }
+
+    // === 策略4: 关键词包含匹配 ===
+    // 对每个关键词规则，检查关键词是否包含在列名中或列名是否包含关键词
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const rule of KEYWORD_RULES) {
+      for (const kw of rule.keywords) {
+        const kwClean = cleanStr(kw);
+        const colClean = cleaned;
+        // 关键词在列名中 或 列名在关键词中
+        if (colClean.includes(kwClean) || kwClean.includes(colClean)) {
+          // 越长越精确
+          const score = Math.max(kwClean.length, colClean.length);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = rule.target;
+          }
+        }
+      }
+    }
+
+    if (bestMatch && !norm[bestMatch]) {
+        norm[bestMatch] = row[k];
+        return;
+    }
+
+    // === 都匹配不到，保留原始列名 ===
+    norm[trimmed] = row[k];
+  });
+
+  return norm;
+}
+
+// ========== File parse entry ==========
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const fileName = file.name.toLowerCase();
+  const isCSV = fileName.endsWith('.csv');
+  const isTSV = fileName.endsWith('.tsv');
+  const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
+  if (!isCSV && !isTSV && !isExcel) {
+    alert('不支持的文件格式，请上传 .xlsx, .xls, .csv 或 .tsv 文件');
+    return;
+  }
+
+  const reader = new FileReader();
+
+  if (isCSV || isTSV) {
+    reader.onload = function(e) {
+      try {
+        const text = e.target.result;
+        const delimiter = isTSV ? '\t' : ',';
+        const json = parseCSV(text, delimiter);
+        processParsedDataMultitable(json, file.name);
+        closeUploadModal();
+        applyFilters();
+      } catch (err) {
+        alert('文件解析失败：' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  } else {
+    reader.onload = function(e) {
+      try {
+        if (typeof XLSX === 'undefined') {
+          alert('XLSX解析库未加载，请检查网络连接。可尝试导出为CSV格式后上传。');
+          return;
+        }
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        processParsedDataMultitable(json, file.name);
+        closeUploadModal();
+        applyFilters();
+      } catch (err) {
+        alert('文件解析失败：' + err.message + '\n\n可尝试将文件另存为CSV格式后重新上传');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+// Drag & drop
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', e => { uploadZone.classList.remove('dragover'); });
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    // Trigger file input change to reuse the same flow
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('fileInput').files = dt.files;
+    handleFileUpload({ target: { files: dt.files } });
+  }
+});
+
+// ========== Toast notification ==========
+function showToast(msg) {
+  const existing = document.getElementById('toastMsg');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = 'toastMsg';
+  div.style.cssText = `
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #fff; color: #212121; padding: 14px 24px;
+    border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    font-size: 14px; font-weight: 600; z-index: 2000;
+    border-left: 4px solid #1565C0;
+    animation: fadeIn .3s ease; max-width: 90vw;
+  `;
+  div.textContent = msg;
+  document.body.appendChild(div);
+  setTimeout(() => { div.style.opacity = '0'; div.style.transition = 'opacity .3s'; setTimeout(() => div.remove(), 300); }, 4000);
+}
+
+// ============================================================
+// WINDOW RESIZE
+// ============================================================
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.chart-container').forEach(el => {
+    if (el.__chart) el.__chart.resize();
+  });
+});
+
+// ============================================================
+// INIT
+// ============================================================
+initDates();
+setDateRange();
+
+// 清理旧版本存储的独立表数据（避免占用配额）
+try { localStorage.removeItem('promotionTables'); } catch(e) {}
+
+// 恢复已合并的数据
+(function() {
+  const saved = localStorage.getItem('promotionData');
+  if (saved) {
+    try {
+      AppData.raw = JSON.parse(saved);
+      if (AppData.raw.length > 0) {
+        const dates = AppData.raw.map(r => r['日期']).filter(Boolean).sort();
+        if (dates.length > 0) {
+          document.getElementById('dateStart').value = dates[0];
+          document.getElementById('dateEnd').value = dates[dates.length - 1];
+        }
+        setDateRange();
+        filterData();
+        renderCurrentPage();
+        return;
+      }
+    } catch(e) {}
+  }
+  AppData.raw = [];
+  AppData.filtered = [];
+  renderCurrentPage();
+})();
+</script>
+</body>
+</html>
