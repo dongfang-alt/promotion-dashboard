@@ -560,7 +560,7 @@ body {
               <div class="group-header">
                 <span class="group-icon">🏪</span>
                 <span class="group-name">天猫</span>
-                <span class="group-sub">绿巨能旗舰店 · 绿巨能数码旗舰店</span>
+                <span class="group-sub">按品类分组</span>
               </div>
               <div class="group-stores" id="tmallStores"></div>
             </div>
@@ -568,7 +568,7 @@ body {
               <div class="group-header">
                 <span class="group-icon">🛒</span>
                 <span class="group-name">京东</span>
-                <span class="group-sub">京东自营 · 京东POP · MR.GREEN</span>
+                <span class="group-sub">按品类分组</span>
               </div>
               <div class="group-stores" id="jdStores"></div>
             </div>
@@ -828,6 +828,24 @@ function processParsedDataMultitable(json, fileName) {
   if (!json || json.length === 0) { alert('文件为空'); return; }
   const normed = json.map(row => normalizeColumns(row));
 
+  // 自动分配渠道：如果数据有 负责人 字段，根据负责人归属分配 渠道 + 店铺
+  const tmallOps = ['梧桐','小鱼','超超','七七','洁凤','清晨','予安','行秋','武松','铁蛋'];
+  const jdOps = ['小赞','木子','可可','附子','胖咯','云海','嘉嘉','雪莲'];
+  let hasPerson = normed.some(r => r['负责人']);
+  if (hasPerson) {
+    normed.forEach(r => {
+      if (!r['渠道'] && r['负责人']) {
+        if (tmallOps.includes(r['负责人'])) {
+          r['渠道'] = '天猫';
+          r['店铺'] = r['品类'] ? r['品类'] + '店' : '天猫店';
+        } else if (jdOps.includes(r['负责人'])) {
+          r['渠道'] = '京东';
+          r['店铺'] = r['品类'] ? r['品类'] + '店' : '京东店';
+        }
+      }
+    });
+  }
+
   // 加载现有合并数据
   let existing = [];
   try {
@@ -995,20 +1013,24 @@ function renderChannelPage() {
     s.cvr = s.clicks ? ((s.orders / s.clicks) * 100).toFixed(1) : '0';
   });
 
-  // Mind map order: 天猫 → 绿巨能旗舰店, 绿巨能数码旗舰店 | 京东 → 京东自营, 京东POP, MR.GREEN
-  const tmallStores = ['绿巨能旗舰店','绿巨能数码旗舰店'];
-  const jdStores = ['京东自营','京东POP','MR.GREEN'];
+  // 动态分组：按渠道（天猫/京东）自动归集各品类店
+  const groups = { '天猫': [], '京东': [] };
+  Object.values(shops).forEach(s => {
+    if (channel && s.channel !== channel) return;
+    if (groups[s.channel]) groups[s.channel].push(s);
+  });
+  // 按消耗降序排列
+  Object.keys(groups).forEach(ch => groups[ch].sort((a,b) => b.spend - a.spend));
 
   function renderStoreCard(s) {
     if (!s) return '';
-    if (channel && s.channel !== channel) return '';
-    const avatarClass = s.channel === '天猫' ? 'tmall' : (s.name === 'MR.GREEN' ? 'mrgreen' : 'jd');
+    const avatarClass = s.channel === '天猫' ? 'tmall' : 'jd';
     return `
       <div class="store-card fade-in">
         <div class="store-top">
-          <div class="store-avatar ${avatarClass}">${s.name[0]}</div>
+          <div class="store-avatar ${avatarClass}">${s.name ? s.name[0] : '?'}</div>
           <div>
-            <div class="store-name">${s.name}</div>
+            <div class="store-name">${s.name || '未知店铺'}</div>
             <div class="store-platform">${s.channel} · ${s.count}条记录</div>
           </div>
         </div>
@@ -1024,14 +1046,16 @@ function renderChannelPage() {
   }
 
   // Render 天猫 group
-  const tmallHtml = tmallStores.map(name => renderStoreCard(shops[name])).filter(h => h).join('');
+  const tmallHtml = groups['天猫'].map(s => renderStoreCard(s)).join('');
   document.getElementById('tmallStores').innerHTML = tmallHtml || '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">暂无天猫店铺数据</div>';
   document.getElementById('tmallGroup').style.display = (channel && channel !== '天猫' && tmallHtml === '') ? 'none' : '';
+  document.querySelector('#tmallGroup .group-sub').textContent = groups['天猫'].length + '个品类';
 
   // Render 京东 group
-  const jdHtml = jdStores.map(name => renderStoreCard(shops[name])).filter(h => h).join('');
+  const jdHtml = groups['京东'].map(s => renderStoreCard(s)).join('');
   document.getElementById('jdStores').innerHTML = jdHtml || '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">暂无京东店铺数据</div>';
   document.getElementById('jdGroup').style.display = (channel && channel !== '京东' && jdHtml === '') ? 'none' : '';
+  document.querySelector('#jdGroup .group-sub').textContent = groups['京东'].length + '个品类';
 
   // 百分比图
   renderChannelPieChart(shops, channel);
@@ -1058,22 +1082,22 @@ function renderChannelPieChart(shops, channel) {
     return;
   }
 
-  // 按渠道颜色区分：天猫=橙色系, 京东=蓝色系, MR.GREEN=绿色
-  const colorMap = {
-    '绿巨能旗舰店': '#FF6D00',
-    '绿巨能数码旗舰店': '#FF9100',
-    '京东自营': '#1565C0',
-    '京东POP': '#42A5F5',
-    'MR.GREEN': '#2E7D32',
+  // 天猫=橙色系, 京东=蓝色系
+  const channelColors = { '天猫': '#FF6D00', '京东': '#1565C0' };
+  const palettes = {
+    '天猫': ['#FF6D00','#FF9100','#FFB300','#FF8F00','#E65100','#F57C00','#FB8C00','#FFA726','#FFB74D','#FFCC80'],
+    '京东': ['#1565C0','#1E88E5','#42A5F5','#0D47A1','#1976D2','#2196F3','#64B5F6','#90CAF9','#29B6F6','#4FC3F7'],
   };
-  // 未匹配的店铺用灰色
-  const colors = allStores.map(s => colorMap[s.name] || '#9E9E9E');
 
-  const pieData = allStores.map(s => ({
-    name: s.name,
-    value: s.spend,
-    itemStyle: { color: colorMap[s.name] || '#9E9E9E' },
-  }));
+  const pieData = allStores.map((s, i) => {
+    const pal = palettes[s.channel] || palettes['天猫'];
+    const ci = i % pal.length;
+    return {
+      name: s.name || '未知',
+      value: s.spend,
+      itemStyle: { color: s.channel ? pal[ci] : '#9E9E9E' },
+    };
+  });
 
   myChart.setOption({
     tooltip: {
@@ -1644,8 +1668,8 @@ const COLUMN_ALIASES = {
   'ROI': ['roi','ROI','投产比','投入产出比','投资回报率','投入产出','投产','roas','ROAS','回报率'],
   'CPC': ['cpc','CPC','点击单价','平均点击花费','单次点击成本','平均点击价格','ppc'],
   'CVR': ['cvr','CVR','转化率','点击转化率','下单转化率','成交转化率','转化','conversion'],
-  '成交金额': ['成交金额','销售额','成交额','gmv','GMV','revenue','销售金额','营业额','交易额','销售总额','总销售额','支付金额','实付金额','交易金额','gmv金额','sales'],
-  '订单量': ['订单量','订单数','orders','成交单数','成交量','总订单','order_count','成交笔数','销售数量','总单数'],
+  '成交金额': ['成交金额','销售额','成交额','gmv','GMV','revenue','销售金额','营业额','交易额','销售总额','总销售额','支付金额','实付金额','交易金额','gmv金额','sales','总成交金额'],
+  '订单量': ['订单量','订单数','orders','成交单数','成交量','总订单','order_count','成交笔数','销售数量','总单数','总成交笔数'],
 };
 
 // 关键词匹配规则：<关键词> → <标准字段>
