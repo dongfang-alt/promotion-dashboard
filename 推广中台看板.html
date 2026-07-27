@@ -870,6 +870,33 @@ function processParsedDataMultitable(json, fileName) {
     });
   }
 
+  // 统一日期格式：将各种日期格式转为 YYYY-MM-DD 字符串
+  normed.forEach(r => {
+    let d = r['日期'];
+    if (d && typeof d === 'object' && d.getFullYear) {
+      // JS Date 对象
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      r['日期'] = `${y}-${m}-${day}`;
+    } else if (typeof d === 'number' && d > 40000 && d < 60000) {
+      // Excel 序列号（1900日期系统）
+      const epoch = new Date(1899, 11, 30);
+      const date = new Date(epoch.getTime() + d * 86400000);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      r['日期'] = `${y}-${m}-${day}`;
+    } else if (typeof d === 'string' && d.includes('/')) {
+      // 斜杠日期如 2026/7/26
+      const parts = d.split('/');
+      if (parts.length === 3) {
+        r['日期'] = `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+      }
+    }
+    // 已经是 YYYY-MM-DD 字符串则不动
+  });
+
   // 加载现有合并数据
   let existing = [];
   try {
@@ -1005,31 +1032,37 @@ function renderChannelPage() {
   const cf = AppData.channelFilter;
   const channel = cf.channel === 'all' ? null : cf.channel;
 
-  // Stats row
   const totalSpend = sum(data, '消耗');
   const totalRevenue = sum(data, '成交金额');
   const totalOrders = sum(data, '订单量');
+  const totalClicks = sum(data, '点击量');
   const avgROI = totalSpend ? (totalRevenue / totalSpend).toFixed(2) : '0';
-  const storeCount = new Set(data.map(r => r['店铺'])).size;
+  const avgCPC = totalClicks ? (totalSpend / totalClicks).toFixed(2) : '0';
+  const avgCVR = totalClicks ? ((totalOrders / totalClicks) * 100).toFixed(1) : '0';
+  const storeCount = new Set(data.map(r => r['店铺']).filter(Boolean)).size;
+  const hasStore = data.some(r => r['店铺']);
 
+  // Stats row
   document.getElementById('channelStats').innerHTML = `
     <div class="stat-card"><div class="label">总消耗</div><div class="value">${fmtMoney(totalSpend)}</div></div>
     <div class="stat-card orange"><div class="label">总成交金额</div><div class="value">${fmtMoney(totalRevenue)}</div></div>
     <div class="stat-card green"><div class="label">总 ROI</div><div class="value">${avgROI}</div></div>
     <div class="stat-card"><div class="label">总订单量</div><div class="value">${totalOrders.toLocaleString()}</div></div>
-    <div class="stat-card orange"><div class="label">店铺数</div><div class="value">${storeCount}</div></div>
+    <div class="stat-card orange"><div class="label">CPC</div><div class="value">${avgCPC}</div></div>
+    <div class="stat-card"><div class="label">CVR</div><div class="value">${avgCVR}%</div></div>
   `;
 
   // Store aggregation
   const shops = {};
   data.forEach(r => {
-    const s = r['店铺'];
-    if (!shops[s]) shops[s] = { name: s, channel: r['渠道'], spend:0, revenue:0, orders:0, clicks:0, roi:0, cpc:0, cvr:0, count:0 };
+    const s = r['店铺'] || '__整体__';
+    if (!shops[s]) shops[s] = { name: r['店铺'] || '整体数据', channel: r['渠道'], spend:0, revenue:0, orders:0, clicks:0, count:0, records: [] };
     shops[s].spend += parseFloat(r['消耗']) || 0;
     shops[s].revenue += parseFloat(r['成交金额']) || 0;
     shops[s].orders += parseInt(r['订单量']) || 0;
     shops[s].clicks += parseInt(r['点击量']) || 0;
     shops[s].count++;
+    if (shops[s].records.length < 2) shops[s].records.push(r);
   });
   Object.values(shops).forEach(s => {
     s.roi = s.spend ? (s.revenue / s.spend).toFixed(2) : '0';
@@ -1038,24 +1071,26 @@ function renderChannelPage() {
   });
 
   // 动态分组：按渠道（天猫/京东）自动归集各品类店
-  const groups = { '天猫': [], '京东': [] };
+  const groups = { '天猫': [], '京东': [], '其他': [] };
   Object.values(shops).forEach(s => {
     if (channel && s.channel !== channel) return;
-    if (groups[s.channel]) groups[s.channel].push(s);
+    if (s.channel === '天猫' || s.channel === '京东') {
+      if (groups[s.channel]) groups[s.channel].push(s);
+    } else {
+      groups['其他'].push(s);
+    }
   });
-  // 按消耗降序排列
   Object.keys(groups).forEach(ch => groups[ch].sort((a,b) => b.spend - a.spend));
 
   function renderStoreCard(s) {
-    if (!s) return '';
-    const avatarClass = s.channel === '天猫' ? 'tmall' : 'jd';
+    const avatarClass = s.channel === '天猫' ? 'tmall' : (s.channel === '京东' ? 'jd' : 'other');
     return `
       <div class="store-card fade-in">
         <div class="store-top">
           <div class="store-avatar ${avatarClass}">${s.name ? s.name[0] : '?'}</div>
           <div>
-            <div class="store-name">${s.name || '未知店铺'}</div>
-            <div class="store-platform">${s.channel} · ${s.count}条记录</div>
+            <div class="store-name">${s.name || '整体数据'}</div>
+            <div class="store-platform">${s.channel || '全部'} · ${s.count}条记录</div>
           </div>
         </div>
         <div class="store-stats">
@@ -1069,20 +1104,63 @@ function renderChannelPage() {
       </div>`;
   }
 
-  // Render 天猫 group
-  const tmallHtml = groups['天猫'].map(s => renderStoreCard(s)).join('');
-  document.getElementById('tmallStores').innerHTML = tmallHtml || '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">暂无天猫店铺数据</div>';
-  document.getElementById('tmallGroup').style.display = (channel && channel !== '天猫' && tmallHtml === '') ? 'none' : '';
-  document.querySelector('#tmallGroup .group-sub').textContent = groups['天猫'].length + '个品类';
+  let groupHtml = '';
 
-  // Render 京东 group
-  const jdHtml = groups['京东'].map(s => renderStoreCard(s)).join('');
-  document.getElementById('jdStores').innerHTML = jdHtml || '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">暂无京东店铺数据</div>';
-  document.getElementById('jdGroup').style.display = (channel && channel !== '京东' && jdHtml === '') ? 'none' : '';
-  document.querySelector('#jdGroup .group-sub').textContent = groups['京东'].length + '个品类';
+  // 如果没有渠道/店铺数据且数据存在，显示数据概览
+  if (data.length > 0 && !hasStore && !channel) {
+    // 显示整体指标卡片
+    const all = shops['__整体__'];
+    groupHtml = `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📊 数据概览</span>
+          <span class="card-badge tmall">${data.length.toLocaleString()}条记录 · ${new Set(data.map(r=>r['日期'])).size}天</span>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:12px 0;text-align:center;">
+            <div><div style="font-size:24px;font-weight:700;">${fmtMoney(totalSpend)}</div><div style="font-size:12px;color:var(--gray-400);">总消耗</div></div>
+            <div><div style="font-size:24px;font-weight:700;">${fmtMoney(totalRevenue)}</div><div style="font-size:12px;color:var(--gray-400);">总成交金额</div></div>
+            <div><div style="font-size:24px;font-weight:700;">${avgROI}</div><div style="font-size:12px;color:var(--gray-400);">ROI</div></div>
+            <div><div style="font-size:24px;font-weight:700;">${totalOrders.toLocaleString()}</div><div style="font-size:12px;color:var(--gray-400);">总订单</div></div>
+          </div>
+          <div style="margin-top:8px;padding:10px 14px;background:#FFF8E1;border-radius:8px;font-size:13px;color:#795548;">
+            💡 <strong>提示：</strong>当前仅导入了数据表。再导入<strong>个人表（含负责人+品类）</strong>后，系统会自动分配渠道/店铺，展示详细分类数据。
+          </div>
+        </div>
+      </div>`;
+    // 隐藏分组区域
+    document.getElementById('tmallGroup').style.display = 'none';
+    document.getElementById('jdGroup').style.display = 'none';
+  } else {
+    // 有店铺数据：正常显示分组
+    document.getElementById('tmallGroup').style.display = (channel && channel !== '天猫' && groups['天猫'].length === 0) ? 'none' : '';
+    document.getElementById('jdGroup').style.display = (channel && channel !== '京东' && groups['京东'].length === 0) ? 'none' : '';
+    document.querySelector('#tmallGroup .group-sub').textContent = groups['天猫'].length + '个品类';
+    document.querySelector('#jdGroup .group-sub').textContent = groups['京东'].length + '个品类';
+
+    const tmallHtml = groups['天猫'].map(s => renderStoreCard(s)).join('');
+    document.getElementById('tmallStores').innerHTML = tmallHtml || '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">暂无天猫店铺数据</div>';
+    const jdHtml = groups['京东'].map(s => renderStoreCard(s)).join('');
+    document.getElementById('jdStores').innerHTML = jdHtml || '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">暂无京东店铺数据</div>';
+
+    // 其他（无渠道）的数据显示
+    if (groups['其他'].length > 0) {
+      groupHtml = groups['其他'].map(s => renderStoreCard(s)).join('');
+    }
+  }
+
+  // 填充店铺卡片区域
+  const cardContainer = document.querySelector('#channelGroupCards');
+  if (groupHtml && data.length > 0) {
+    cardContainer.innerHTML = groupHtml;
+  } else if (data.length > 0) {
+    // 已经有正常分组了，不动
+  } else {
+    cardContainer.innerHTML = '<div class="no-data" style="padding:40px;text-align:center;"><div class="icon" style="font-size:40px;">📭</div><div class="text" style="font-size:14px;color:var(--gray-400);margin-top:8px;">暂无数据，请点击右上角「导入数据」</div></div>';
+  }
 
   // 百分比图
-  renderChannelPieChart(shops, channel);
+  renderChannelPieChart(shops, channel, data.length > 0);
 
   // Trend chart
   renderChannelTrendChart(data, channel);
@@ -1376,7 +1454,9 @@ function renderPersonPage() {
       </div>`;
   });
 
-  document.getElementById('personGroupGrid').innerHTML = html || '<div class="no-data"><div class="icon">👥</div><div class="text">暂无数据，请导入或切换渠道</div></div>';
+  document.getElementById('personGroupGrid').innerHTML = html || (data.length > 0
+    ? '<div class="no-data"><div class="icon">👥</div><div class="text">暂无人员数据，请导入<strong>个人表（含负责人列）</strong></div></div>'
+    : '<div class="no-data"><div class="icon">📭</div><div class="text">暂无数据，请导入</div></div>');
 }
 
 // ============================================================
@@ -1455,7 +1535,9 @@ function renderCategoryPage() {
       </div>`;
   });
 
-  document.getElementById('categoryGrid').innerHTML = html || '<div class="no-data"><div class="icon">📦</div><div class="text">暂无数据</div></div>';
+  document.getElementById('categoryGrid').innerHTML = html || (data.length > 0
+    ? '<div class="no-data" style="padding:40px;text-align:center;"><div class="icon" style="font-size:40px;">📦</div><div class="text" style="font-size:14px;color:var(--gray-400);margin-top:8px;">暂无品类数据，请导入<strong>个人表（含品类列）</strong></div></div>'
+    : '<div class="no-data" style="padding:40px;text-align:center;"><div class="icon" style="font-size:40px;">📭</div><div class="text" style="font-size:14px;color:var(--gray-400);margin-top:8px;">暂无数据，请点击右上角「导入数据」</div></div>');
 }
 
 // ============================================================
