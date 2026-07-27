@@ -713,12 +713,12 @@ body {
       </div>
       <div id="uploadPreview" style="display:none;margin-top:12px;"></div>
       <div style="margin-top:12px;font-size:12px;color:var(--gray-400);">
-        <strong>数据格式要求：</strong>
-        列需包含：日期, 渠道, 店铺, 消耗, 成交金额等<br>
-        <strong>支持格式：</strong>
-        .xlsx / .csv（推荐CSV，无需联网）<br>
+        <strong>📋 支持列名自动映射：</strong><br>
+        指标：投入产出比 → ROI · 平均点击花费 → CPC · 点击转化率 → CVR · 成交笔数 → 订单量<br>
+        关联：主体ID / 商品ID → 自动匹配合并<br>
+        支持 .xlsx / .csv（推荐CSV，无需联网）</br>
         <strong>多表联动：</strong>
-        导入多个文件后，系统会自动以<strong>商品ID/SKU</strong>等共享字段为桥梁，合并所有表展示完整信息
+        先导入数据表（主体ID+指标），再导入人员表（商品ID+负责人），系统自动以主体ID↔商品ID为桥梁合并
       </div>
     </div>
     <div class="modal-footer">
@@ -743,7 +743,7 @@ const AppData = {
 // ============================================================
 // 多表自动合并引擎（后台运行，无单独页面）
 // ============================================================
-const JOIN_KEYS = ['商品ID','商品编号','SKU','单品','商品名称','商品名','产品','产品名','spu','item_id','goods_id'];
+const JOIN_KEYS = ['商品ID','商品编号','SKU','单品','商品名称','商品名','产品','产品名','spu','item_id','goods_id','主体ID'];
 
 /** 检测数据中的关联键 */
 function detectJoinKeyInData(rows) {
@@ -768,7 +768,12 @@ function smartMergeData(existing, newData) {
 
   const existingCols = Object.keys(existing[0]);
   const newCols = Object.keys(newData[0]);
-  const shared = existingCols.filter(c => newCols.includes(c));
+  let shared = existingCols.filter(c => newCols.includes(c));
+
+  // 优先用 '单品' 作为关联键（主体ID → 单品, 商品ID → 单品）
+  if (shared.length > 0 && shared.includes('单品')) {
+    shared = ['单品'];
+  }
 
   if (shared.length === 0) {
     // 无共享列：按行号拼合
@@ -1631,7 +1636,7 @@ const COLUMN_ALIASES = {
   '店铺': ['店铺','店','store','shop','门店','店名','店铺名','铺','商店','商城'],
   '负责人': ['负责人','运营','person','owner','操作人','运营人','操作者','运营专员','推广人','管理员','账号负责人','投手'],
   '品类': ['品类','类目','category','分类','产品类目','产品分类','商品品类','商品类目','cat','类别','产品线'],
-  '单品': ['单品','商品','产品','sku','product','item','商品名称','产品名称','商品名','产品名','宝贝','spu','item_name','goods_name'],
+  '单品': ['单品','商品','产品','sku','product','item','商品名称','产品名称','商品名','产品名','宝贝','spu','item_name','goods_name','主体ID','商品ID','商品编号'],
   '推广渠道': ['推广渠道','推广方式','广告渠道','promotion','渠道类型','广告类型','推广类型','推广工具','广告位','投放渠道','投放方式','广告形式','流量来源','媒介','媒体'],
   '消耗': ['消耗','花费','spend','消费','支出','广告花费','推广花费','费用','广告费','推广费','总花费','实际消耗','现金消耗','消耗金额','耗用','扣费'],
   '展现量': ['展现量','曝光','impressions','展示量','曝光量','展示次数','曝光次数','impression','pv','浏览量','展现'],
@@ -1657,7 +1662,7 @@ const KEYWORD_RULES = [
   // 品类
   { keywords: ['品类','类目','分类','类别','产品线'], target: '品类' },
   // 单品
-  { keywords: ['单品','商品','产品','宝贝','sku','spu','item','goods'], target: '单品' },
+  { keywords: ['单品','商品','产品','宝贝','sku','spu','item','goods','主体ID','主体'], target: '单品' },
   // 推广渠道
   { keywords: ['推广','广告','投放','渠道','媒介','流量来源'], target: '推广渠道' },
   // 消耗
