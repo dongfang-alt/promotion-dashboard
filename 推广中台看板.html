@@ -524,7 +524,7 @@ body {
           <input type="date" id="dateEnd" onchange="applyFilters()">
         </div>
         <button class="btn btn-primary" onclick="openUploadModal()">📤 导入数据</button>
-        
+        <button class="btn btn-outline btn-sm" onclick="openClearModal()" title="清理数据">🗑️</button>
       </div>
     </header>
 
@@ -723,6 +723,30 @@ body {
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeUploadModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Clear Data Modal ===== -->
+<div class="modal-overlay" id="clearModal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h3>🗑️ 清理数据</h3>
+      <button class="modal-close" onclick="closeClearModal()">&times;</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <div style="font-size:40px;margin:10px 0;">🔒</div>
+      <div style="font-size:14px;color:var(--gray-600);margin-bottom:16px;">
+        此操作将清除所有已导入的数据，请输入密码确认
+      </div>
+      <input type="password" id="clearPassword" placeholder="请输入密码"
+        style="width:100%;padding:10px 14px;border:2px solid var(--gray-300);border-radius:8px;font-size:15px;text-align:center;outline:none;"
+        onkeydown="if(event.key==='Enter') confirmClearData()">
+      <div id="clearError" style="color:#D32F2F;font-size:13px;margin-top:8px;display:none;">❌ 密码错误</div>
+    </div>
+    <div class="modal-footer" style="justify-content:center;gap:10px;">
+      <button class="btn btn-outline" onclick="closeClearModal()">取消</button>
+      <button class="btn" style="background:#D32F2F;color:#fff;" onclick="confirmClearData()">确认清理</button>
     </div>
   </div>
 </div>
@@ -1599,6 +1623,36 @@ function openUploadModal() {
 
 function closeUploadModal() {
   document.getElementById('uploadModal').classList.remove('show');
+}
+
+// ========== Clear Data (password protected) ==========
+const CLEAR_PASSWORD = 'ljnpz2026';
+
+function openClearModal() {
+  document.getElementById('clearModal').classList.add('show');
+  document.getElementById('clearPassword').value = '';
+  document.getElementById('clearError').style.display = 'none';
+  setTimeout(() => document.getElementById('clearPassword').focus(), 100);
+}
+
+function closeClearModal() {
+  document.getElementById('clearModal').classList.remove('show');
+}
+
+function confirmClearData() {
+  const pwd = document.getElementById('clearPassword').value;
+  if (pwd !== CLEAR_PASSWORD) {
+    document.getElementById('clearError').style.display = 'block';
+    document.getElementById('clearPassword').focus();
+    return;
+  }
+  // 清除数据
+  AppData.raw = [];
+  AppData.filtered = [];
+  localStorage.removeItem('promotionData');
+  closeClearModal();
+  showToast('✅ 所有数据已清除');
+  renderCurrentPage();
 }
 
 // ========== CSV Parser (no CDN needed) ==========
