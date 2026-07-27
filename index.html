@@ -1033,40 +1033,35 @@ function renderChannelPage() {
   const channel = cf.channel === 'all' ? null : cf.channel;
 
   const totalSpend = sum(data, '消耗');
-  const totalRevenue = sum(data, '成交金额');
-  const totalOrders = sum(data, '订单量');
   const totalClicks = sum(data, '点击量');
+  const totalRevenue = sum(data, '成交金额');
   const avgROI = totalSpend ? (totalRevenue / totalSpend).toFixed(2) : '0';
   const avgCPC = totalClicks ? (totalSpend / totalClicks).toFixed(2) : '0';
-  const avgCVR = totalClicks ? ((totalOrders / totalClicks) * 100).toFixed(1) : '0';
-  const storeCount = new Set(data.map(r => r['店铺']).filter(Boolean)).size;
+  const avgCVR = totalClicks ? ((sum(data, '订单量') / totalClicks) * 100).toFixed(1) : '0';
   const hasStore = data.some(r => r['店铺']);
 
-  // Stats row
+  // Stats row — 核心指标: 消耗, CPC, ROI, CVR
   document.getElementById('channelStats').innerHTML = `
     <div class="stat-card"><div class="label">总消耗</div><div class="value">${fmtMoney(totalSpend)}</div></div>
-    <div class="stat-card orange"><div class="label">总成交金额</div><div class="value">${fmtMoney(totalRevenue)}</div></div>
-    <div class="stat-card green"><div class="label">总 ROI</div><div class="value">${avgROI}</div></div>
-    <div class="stat-card"><div class="label">总订单量</div><div class="value">${totalOrders.toLocaleString()}</div></div>
-    <div class="stat-card orange"><div class="label">CPC</div><div class="value">${avgCPC}</div></div>
-    <div class="stat-card"><div class="label">CVR</div><div class="value">${avgCVR}%</div></div>
+    <div class="stat-card orange"><div class="label">平均 CPC</div><div class="value">${avgCPC}</div></div>
+    <div class="stat-card green"><div class="label">平均 ROI</div><div class="value">${avgROI}</div></div>
+    <div class="stat-card"><div class="label">平均 CVR</div><div class="value">${avgCVR}%</div></div>
   `;
 
   // Store aggregation
   const shops = {};
   data.forEach(r => {
     const s = r['店铺'] || '__整体__';
-    if (!shops[s]) shops[s] = { name: r['店铺'] || '整体数据', channel: r['渠道'], spend:0, revenue:0, orders:0, clicks:0, count:0, records: [] };
+    if (!shops[s]) shops[s] = { name: r['店铺'] || '整体数据', channel: r['渠道'], spend:0, clicks:0, revenue:0, orders:0, count:0 };
     shops[s].spend += parseFloat(r['消耗']) || 0;
+    shops[s].clicks += parseInt(r['点击量']) || 0;
     shops[s].revenue += parseFloat(r['成交金额']) || 0;
     shops[s].orders += parseInt(r['订单量']) || 0;
-    shops[s].clicks += parseInt(r['点击量']) || 0;
     shops[s].count++;
-    if (shops[s].records.length < 2) shops[s].records.push(r);
   });
   Object.values(shops).forEach(s => {
-    s.roi = s.spend ? (s.revenue / s.spend).toFixed(2) : '0';
     s.cpc = s.clicks ? (s.spend / s.clicks).toFixed(2) : '0';
+    s.roi = s.spend ? (s.revenue / s.spend).toFixed(2) : '0';
     s.cvr = s.clicks ? ((s.orders / s.clicks) * 100).toFixed(1) : '0';
   });
 
@@ -1095,11 +1090,9 @@ function renderChannelPage() {
         </div>
         <div class="store-stats">
           <div class="store-stat"><div class="val">${fmtMoney(s.spend)}</div><div class="lbl">消耗</div></div>
-          <div class="store-stat"><div class="val">${fmtMoney(s.revenue)}</div><div class="lbl">成交金额</div></div>
-          <div class="store-stat"><div class="val">${s.roi}</div><div class="lbl">ROI</div></div>
           <div class="store-stat"><div class="val">${s.cpc}</div><div class="lbl">CPC</div></div>
+          <div class="store-stat"><div class="val">${s.roi}</div><div class="lbl">ROI</div></div>
           <div class="store-stat"><div class="val">${s.cvr}%</div><div class="lbl">CVR</div></div>
-          <div class="store-stat"><div class="val">${s.orders}</div><div class="lbl">订单量</div></div>
         </div>
       </div>`;
   }
@@ -1119,9 +1112,9 @@ function renderChannelPage() {
         <div class="card-body">
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:12px 0;text-align:center;">
             <div><div style="font-size:24px;font-weight:700;">${fmtMoney(totalSpend)}</div><div style="font-size:12px;color:var(--gray-400);">总消耗</div></div>
-            <div><div style="font-size:24px;font-weight:700;">${fmtMoney(totalRevenue)}</div><div style="font-size:12px;color:var(--gray-400);">总成交金额</div></div>
-            <div><div style="font-size:24px;font-weight:700;">${avgROI}</div><div style="font-size:12px;color:var(--gray-400);">ROI</div></div>
-            <div><div style="font-size:24px;font-weight:700;">${totalOrders.toLocaleString()}</div><div style="font-size:12px;color:var(--gray-400);">总订单</div></div>
+            <div><div style="font-size:24px;font-weight:700;">${avgCPC}</div><div style="font-size:12px;color:var(--gray-400);">平均 CPC</div></div>
+            <div><div style="font-size:24px;font-weight:700;">${avgROI}</div><div style="font-size:12px;color:var(--gray-400);">平均 ROI</div></div>
+            <div><div style="font-size:24px;font-weight:700;">${avgCVR}%</div><div style="font-size:12px;color:var(--gray-400);">平均 CVR</div></div>
           </div>
           <div style="margin-top:8px;padding:10px 14px;background:#FFF8E1;border-radius:8px;font-size:13px;color:#795548;">
             💡 <strong>提示：</strong>当前仅导入了数据表。再导入<strong>个人表（含负责人+品类）</strong>后，系统会自动分配渠道/店铺，展示详细分类数据。
@@ -1326,19 +1319,21 @@ function renderPersonPage() {
   const cf = AppData.channelFilter;
   const channel = cf.channel === 'all' ? null : cf.channel;
 
-  // Stats
+  // Stats — 核心指标: 消耗, CPC, ROI, CVR
   const totalSpend = sum(data, '消耗');
+  const totalClicks = sum(data, '点击量');
   const totalRevenue = sum(data, '成交金额');
-  const totalOrders = sum(data, '订单量');
   const avgROI = totalSpend ? (totalRevenue / totalSpend).toFixed(2) : '0';
+  const avgCPC = totalClicks ? (totalSpend / totalClicks).toFixed(2) : '0';
+  const avgCVR = totalClicks ? ((sum(data, '订单量') / totalClicks) * 100).toFixed(1) : '0';
   const peopleCount = new Set(data.filter(r => r['负责人']).map(r => r['负责人'])).size;
 
   document.getElementById('personStats').innerHTML = `
     <div class="stat-card"><div class="label">总消耗</div><div class="value">${fmtMoney(totalSpend)}</div></div>
-    <div class="stat-card orange"><div class="label">总成交</div><div class="value">${fmtMoney(totalRevenue)}</div></div>
+    <div class="stat-card orange"><div class="label">平均 CPC</div><div class="value">${avgCPC}</div></div>
     <div class="stat-card green"><div class="label">平均 ROI</div><div class="value">${avgROI}</div></div>
+    <div class="stat-card"><div class="label">平均 CVR</div><div class="value">${avgCVR}%</div></div>
     <div class="stat-card orange"><div class="label">操作人数</div><div class="value">${peopleCount}</div></div>
-    <div class="stat-card"><div class="label">总订单</div><div class="value">${totalOrders.toLocaleString()}</div></div>
   `;
 
   // Person aggregation
@@ -1356,6 +1351,7 @@ function renderPersonPage() {
   Object.values(persons).forEach(p => {
     p.roi = p.spend ? (p.revenue / p.spend).toFixed(2) : '0';
     p.cpc = p.clicks ? (p.spend / p.clicks).toFixed(2) : '0';
+    p.cvr = p.clicks ? ((p.orders / p.clicks) * 100).toFixed(1) : '0';
     p.shopList = [...p.shops].join(', ');
   });
 
@@ -1394,14 +1390,17 @@ function renderPersonPage() {
     if (!container) return;
     const members = predefined.map(name => persons[name]).filter(Boolean);
     const totalSpend = members.reduce((s, p) => s + p.spend, 0);
+    const totalClicks = members.reduce((s, p) => s + p.clicks, 0);
     const totalRev = members.reduce((s, p) => s + p.revenue, 0);
     const totalOrd = members.reduce((s, p) => s + p.orders, 0);
+    const avgCpc = totalClicks ? (totalSpend / totalClicks).toFixed(2) : '0';
     const avgRoi = totalSpend ? (totalRev / totalSpend).toFixed(2) : '0';
+    const avgCvr = totalClicks ? ((totalOrd / totalClicks) * 100).toFixed(1) : '0';
     container.innerHTML = `
       <div class="org-data-item"><div class="od-val">${fmtMoney(totalSpend)}</div><div class="od-lbl">总消耗</div></div>
-      <div class="org-data-item"><div class="od-val">${fmtMoney(totalRev)}</div><div class="od-lbl">总成交</div></div>
+      <div class="org-data-item"><div class="od-val">${avgCpc}</div><div class="od-lbl">平均CPC</div></div>
       <div class="org-data-item"><div class="od-val">${avgRoi}</div><div class="od-lbl">平均ROI</div></div>
-      <div class="org-data-item"><div class="od-val">${totalOrd}</div><div class="od-lbl">总订单</div></div>
+      <div class="org-data-item"><div class="od-val">${avgCvr}%</div><div class="od-lbl">平均CVR</div></div>
     `;
   }
   renderOrgData('tmallOrgData', tmallPeople, '天猫');
@@ -1444,8 +1443,9 @@ function renderPersonPage() {
                   </div>
                   <div class="person-stats">
                     <div class="ps"><div class="pv">${fmtMoney(p.spend)}</div><div class="pl">消耗</div></div>
-                    <div class="ps"><div class="pv">${fmtMoney(p.revenue)}</div><div class="pl">成交</div></div>
+                    <div class="ps"><div class="pv">${p.cpc}</div><div class="pl">CPC</div></div>
                     <div class="ps"><div class="pv">${p.roi}</div><div class="pl">ROI</div></div>
+                    <div class="ps"><div class="pv">${p.cvr}%</div><div class="pl">CVR</div></div>
                   </div>
                 </div>`;
             }).join('')}
@@ -1473,18 +1473,20 @@ function renderCategoryPage() {
   const selHtml = '<option value="all">全部品类</option>' + cats.map(c => `<option value="${c}" ${c === selCat ? 'selected' : ''}>${c}</option>`).join('');
   document.getElementById('categorySelect').innerHTML = selHtml;
 
-  // Stats
+  // Stats — 核心指标: 消耗, CPC, ROI, CVR
   const totalSpend = sum(data, '消耗');
+  const totalClicks = sum(data, '点击量');
   const totalRevenue = sum(data, '成交金额');
-  const totalOrders = sum(data, '订单量');
   const avgROI = totalSpend ? (totalRevenue / totalSpend).toFixed(2) : '0';
+  const avgCPC = totalClicks ? (totalSpend / totalClicks).toFixed(2) : '0';
+  const avgCVR = totalClicks ? ((sum(data, '订单量') / totalClicks) * 100).toFixed(1) : '0';
 
   document.getElementById('categoryStats').innerHTML = `
     <div class="stat-card"><div class="label">总消耗</div><div class="value">${fmtMoney(totalSpend)}</div></div>
-    <div class="stat-card orange"><div class="label">总成交</div><div class="value">${fmtMoney(totalRevenue)}</div></div>
-    <div class="stat-card green"><div class="label">总 ROI</div><div class="value">${avgROI}</div></div>
-    <div class="stat-card"><div class="label">品类数</div><div class="value">${cats.length}</div></div>
-    <div class="stat-card orange"><div class="label">订单量</div><div class="value">${totalOrders.toLocaleString()}</div></div>
+    <div class="stat-card orange"><div class="label">平均 CPC</div><div class="value">${avgCPC}</div></div>
+    <div class="stat-card green"><div class="label">平均 ROI</div><div class="value">${avgROI}</div></div>
+    <div class="stat-card"><div class="label">平均 CVR</div><div class="value">${avgCVR}%</div></div>
+    <div class="stat-card orange"><div class="label">品类数</div><div class="value">${cats.length}</div></div>
   `;
 
   // Category aggregation
@@ -1509,18 +1511,19 @@ function renderCategoryPage() {
   Object.entries(catData).sort((a,b) => b[1].spend - a[1].spend).forEach(([cat, cd], i) => {
     const roi = cd.spend ? (cd.revenue / cd.spend).toFixed(2) : '0';
     const cpc = cd.clicks ? (cd.spend / cd.clicks).toFixed(2) : '0';
+    const cvr = cd.clicks ? ((cd.orders / cd.clicks) * 100).toFixed(1) : '0';
     html += `
       <div class="card fade-in">
         <div class="card-header">
           <span class="card-title"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${colors[i % colors.length]}"></span> ${cat}</span>
-          <span class="card-badge tmall">${cd.items.size}个单品 · ${cd.channels.size}个渠道</span>
+          <span class="card-badge tmall">${cd.items.size}个单品</span>
         </div>
         <div class="card-body">
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
             <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${fmtMoney(cd.spend)}</div><div style="font-size:11px;color:var(--gray-400);">消耗</div></div>
-            <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${fmtMoney(cd.revenue)}</div><div style="font-size:11px;color:var(--gray-400);">成交</div></div>
-            <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${roi}</div><div style="font-size:11px;color:var(--gray-400);">ROI</div></div>
             <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${cpc}</div><div style="font-size:11px;color:var(--gray-400);">CPC</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${roi}</div><div style="font-size:11px;color:var(--gray-400);">ROI</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:700;">${cvr}%</div><div style="font-size:11px;color:var(--gray-400);">CVR</div></div>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:4px;">
             ${[...cd.channels].map(ch => `<span style="padding:2px 8px;background:var(--blue-bg);color:var(--blue);border-radius:10px;font-size:11px;font-weight:500;">${ch}</span>`).join('')}
