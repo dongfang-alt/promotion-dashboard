@@ -982,7 +982,13 @@ function switchPage(page) {
 
 function renderCurrentPage() {
   const pages = { channel: renderChannelPage, person: renderPersonPage, category: renderCategoryPage, abnormal: renderAbnormalPage };
-  if (pages[AppData.currentPage]) pages[AppData.currentPage]();
+  if (pages[AppData.currentPage]) {
+    try {
+      pages[AppData.currentPage]();
+    } catch (e) {
+      console.error('页面渲染异常:', e);
+    }
+  }
 }
 
 // ============================================================
@@ -1131,14 +1137,14 @@ function renderChannelPage() {
         </div>
       </div>`;
     // 隐藏分组区域
-    document.getElementById('tmallGroup').style.display = 'none';
-    document.getElementById('jdGroup').style.display = 'none';
+    const tg = document.getElementById('tmallGroup'); if (tg) tg.style.display = 'none';
+    const jg = document.getElementById('jdGroup'); if (jg) jg.style.display = 'none';
   } else {
     // 有店铺数据：正常显示分组
-    document.getElementById('tmallGroup').style.display = (channel && channel !== '天猫' && groups['天猫'].length === 0) ? 'none' : '';
-    document.getElementById('jdGroup').style.display = (channel && channel !== '京东' && groups['京东'].length === 0) ? 'none' : '';
-    document.querySelector('#tmallGroup .group-sub').textContent = groups['天猫'].length + '个品类';
-    document.querySelector('#jdGroup .group-sub').textContent = groups['京东'].length + '个品类';
+    const tg = document.getElementById('tmallGroup'); if (tg) tg.style.display = (channel && channel !== '天猫' && groups['天猫'].length === 0) ? 'none' : '';
+    const jg = document.getElementById('jdGroup'); if (jg) jg.style.display = (channel && channel !== '京东' && groups['京东'].length === 0) ? 'none' : '';
+    const ts = document.querySelector('#tmallGroup .group-sub'); if (ts) ts.textContent = groups['天猫'].length + '个品类';
+    const js = document.querySelector('#jdGroup .group-sub'); if (js) js.textContent = groups['京东'].length + '个品类';
 
     const tmallHtml = groups['天猫'].map(s => renderStoreCard(s)).join('');
     document.getElementById('tmallStores').innerHTML = tmallHtml || '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px;">暂无天猫店铺数据</div>';
@@ -1153,12 +1159,14 @@ function renderChannelPage() {
 
   // 填充店铺卡片区域
   const cardContainer = document.querySelector('#channelGroupCards');
-  if (groupHtml && data.length > 0) {
-    cardContainer.innerHTML = groupHtml;
-  } else if (data.length > 0) {
-    // 已经有正常分组了，不动
-  } else {
-    cardContainer.innerHTML = '<div class="no-data" style="padding:40px;text-align:center;"><div class="icon" style="font-size:40px;">📭</div><div class="text" style="font-size:14px;color:var(--gray-400);margin-top:8px;">暂无数据，请点击右上角「导入数据」</div></div>';
+  if (cardContainer) {
+    if (groupHtml && data.length > 0) {
+      cardContainer.innerHTML = groupHtml;
+    } else if (data.length > 0) {
+      // 已经有正常分组了，不动
+    } else {
+      cardContainer.innerHTML = '<div class="no-data" style="padding:40px;text-align:center;"><div class="icon" style="font-size:40px;">📭</div><div class="text" style="font-size:14px;color:var(--gray-400);margin-top:8px;">暂无数据，请点击右上角「导入数据」</div></div>';
+    }
   }
 
   // 百分比图
@@ -1171,6 +1179,7 @@ function renderChannelPage() {
 /** 渠道消耗占比饼图（百分比图） */
 function renderChannelPieChart(shops, channel) {
   const chartDom = document.getElementById('channelPieChart');
+  if (!chartDom) return;
   let myChart = echarts.getInstanceByDom(chartDom);
   if (!myChart) myChart = echarts.init(chartDom);
   chartDom.__chart = myChart;
@@ -1255,6 +1264,7 @@ function renderChannelPieChart(shops, channel) {
 
 function renderChannelTrendChart(data, channel) {
   const chartDom = document.getElementById('channelTrendChart');
+  if (!chartDom) return;
   let myChart = echarts.getInstanceByDom(chartDom);
   if (!myChart) myChart = echarts.init(chartDom);
   chartDom.__chart = myChart;
@@ -2000,7 +2010,8 @@ function handleFileUpload(event) {
         closeUploadModal();
         applyFilters();
       } catch (err) {
-        alert('文件解析失败：' + err.message + '\n\n可尝试将文件另存为CSV格式后重新上传');
+        const extra = err.stack ? err.stack.split('\n').slice(0,2).join(' ') : '';
+        alert('文件解析失败：' + err.message + '\n位置：' + extra + '\n\n可尝试将文件另存为CSV格式后重新上传');
       }
     };
     reader.readAsArrayBuffer(file);
